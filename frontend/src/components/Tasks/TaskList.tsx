@@ -26,7 +26,8 @@ export function TaskList() {
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  const filteredTasks = activeFilter === "all" ? tasks : tasks.filter((t) => t.source === activeFilter);
+  const safeTasks = tasks ?? [];
+  const filteredTasks = activeFilter === "all" ? safeTasks : safeTasks.filter((t) => t.source === activeFilter);
   const pendingTasks = filteredTasks.filter((t) => t.status !== "done");
   const doneTasks = filteredTasks.filter((t) => t.status === "done");
 
@@ -65,7 +66,7 @@ export function TaskList() {
       )}
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-0.5">
-        {isLoading && tasks.length === 0 ? (
+        {isLoading && safeTasks.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-2 border-ase-gold/20 border-t-ase-gold rounded-full animate-spin" />

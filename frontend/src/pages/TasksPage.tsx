@@ -3,14 +3,11 @@ import { MusicPlayer } from "../components/Music/MusicPlayer";
 import { MiniPlayer } from "../components/Music/MiniPlayer";
 import { EnergyCheck } from "../components/Energy/EnergyCheck";
 import { EnergyHeatmap } from "../components/Energy/EnergyHeatmap";
-import { YouTubeEmbed } from "../components/Music/YouTubeEmbed";
 import { Flame, Lightbulb } from "lucide-react";
 
 export function TasksPage() {
   return (
     <>
-      <YouTubeEmbed />
-
       <div className="min-h-screen bg-ase-bg pb-20">
         {/* Page header */}
         <div className="px-6 lg:px-10 pt-8 pb-6">

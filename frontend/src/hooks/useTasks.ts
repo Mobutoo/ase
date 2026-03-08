@@ -29,7 +29,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       const params =
         activeFilter !== "all" ? { source: activeFilter } : undefined;
       const res = await unifiedTasks.list(params);
-      set({ tasks: res.results, isLoading: false });
+      set({ tasks: res.results ?? [], isLoading: false });
     } catch (err) {
       set({
         isLoading: false,

@@ -34,8 +34,9 @@ export function EnergyHeatmap() {
   }, [fetchHeatmap]);
 
   // Build lookup: dayOfWeek × hour → entry
+  const safeHeatmap = heatmap ?? [];
   const lookup = new Map<string, { avgLevel: number; count: number }>();
-  for (const entry of heatmap) {
+  for (const entry of safeHeatmap) {
     lookup.set(`${entry.dayOfWeek}-${entry.hour}`, {
       avgLevel: entry.avgLevel,
       count: entry.count,
@@ -61,7 +62,7 @@ export function EnergyHeatmap() {
         )}
       </div>
 
-      {heatmap.length === 0 && !isLoading ? (
+      {safeHeatmap.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center py-8 gap-2">
           <span className="text-3xl">⚡</span>
           <p className="text-xs text-[#8a8aae] text-center">

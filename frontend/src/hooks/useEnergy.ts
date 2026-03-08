@@ -34,7 +34,7 @@ export const useEnergyStore = create<EnergyState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await energy.list();
-      set({ readings: res.results, isLoading: false });
+      set({ readings: res.results ?? [], isLoading: false });
     } catch (err) {
       set({
         isLoading: false,

@@ -77,7 +77,7 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await playlists.list();
-      set({ availablePlaylists: res.results, isLoading: false });
+      set({ availablePlaylists: res.results ?? [], isLoading: false });
     } catch {
       // Fallback to built-in defaults — API may not exist yet
       const builtIn: Playlist[] = Object.entries(DEFAULT_PLAYLISTS).map(

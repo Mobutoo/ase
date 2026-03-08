@@ -12,11 +12,13 @@ export function PlaylistSelector() {
   const [customUrl, setCustomUrl] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
 
+  const playlists = availablePlaylists ?? [];
+
   useEffect(() => {
-    if (availablePlaylists.length === 0) {
+    if (playlists.length === 0) {
       fetchPlaylists();
     }
-  }, [availablePlaylists.length, fetchPlaylists]);
+  }, [playlists.length, fetchPlaylists]);
 
   const handleSelect = (playlist: Playlist) => {
     setPlaylist(playlist);
@@ -79,7 +81,7 @@ export function PlaylistSelector() {
           overflow-hidden z-50
         ">
           <div className="p-1">
-            {availablePlaylists
+            {playlists
               .filter((p) => !p.isCustom)
               .map((playlist) => (
                 <button
