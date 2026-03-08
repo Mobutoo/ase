@@ -55,8 +55,8 @@ RUN pip install --upgrade pip && \
 # Copy project
 COPY . $APP_HOME
 
-# Copy frontend build
-COPY --from=frontend /app/frontend/dist $APP_HOME/staticfiles/frontend
+# Copy frontend build (Vite outputs to ../staticfiles/frontend relative to frontend/)
+COPY --from=frontend /app/staticfiles/frontend $APP_HOME/staticfiles/frontend
 
 # Collect static files (Django legacy + React)
 RUN cp -r ${APP_HOME}/app/static/* ${APP_HOME}/staticfiles/ 2>/dev/null || true

@@ -152,4 +152,4 @@ media/profile_pics/*
 # Frontend (React + Vite)
 frontend/node_modules/
 frontend/dist/
-staticfiles/frontend/
+staticfiles/frontend/frontend/tsconfig.tsbuildinfo

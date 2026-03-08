@@ -158,6 +158,7 @@ USE_I18N = True
 # --- Static files ---
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATIC_URL = "/static/"
+STATICFILES_DIRS = []
 
 # --- Default PK ---
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

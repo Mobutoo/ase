@@ -1,7 +1,7 @@
 # Ase — Human-centric flow engine
 # Core
 django==4.2.27
-django-allauth==0.55.2
+django-allauth==0.57.2
 djangorestframework==3.15.2
 dj-database-url==2.3.0
 gunicorn==22.0.0
