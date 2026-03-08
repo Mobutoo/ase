@@ -68,6 +68,7 @@ export function YouTubeEmbed() {
   const isPlaying = useMusicStore((s) => s.isPlaying);
   const currentTrack = useMusicStore((s) => s.currentTrack);
   const volume = useMusicStore((s) => s.volume);
+  const playerReady = useMusicStore((s) => s._playerReady);
   const setPlayerReady = useMusicStore((s) => s.setPlayerReady);
   const pause = useMusicStore((s) => s.pause);
 
@@ -113,10 +114,10 @@ export function YouTubeEmbed() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load track when currentTrack changes
+  // Load track when currentTrack changes OR player becomes ready
   useEffect(() => {
     const player = playerRef.current;
-    if (!player || !playerReadyRef.current || !currentTrack?.youtubeUrl) return;
+    if (!player || !playerReady || !currentTrack?.youtubeUrl) return;
 
     const listId = extractPlaylistId(currentTrack.youtubeUrl);
     const videoId = extractVideoId(currentTrack.youtubeUrl);
@@ -126,24 +127,24 @@ export function YouTubeEmbed() {
     } else if (videoId) {
       player.loadVideoById(videoId);
     }
-  }, [currentTrack]);
+  }, [currentTrack, playerReady]);
 
-  // Play / pause
+  // Play / pause (re-runs when player becomes ready)
   useEffect(() => {
     const player = playerRef.current;
-    if (!player || !playerReadyRef.current) return;
+    if (!player || !playerReady) return;
     if (isPlaying) {
       player.playVideo();
     } else {
       player.pauseVideo();
     }
-  }, [isPlaying]);
+  }, [isPlaying, playerReady]);
 
-  // Volume
+  // Volume (re-runs when player becomes ready)
   useEffect(() => {
-    if (!playerReadyRef.current) return;
+    if (!playerReady) return;
     playerRef.current?.setVolume(volume);
-  }, [volume]);
+  }, [volume, playerReady]);
 
   // Hidden player — visually invisible but mounted in DOM
   return (

@@ -64,11 +64,16 @@ interface MusicState {
   clearError: () => void;
 }
 
+// Built-in defaults — always available, even without API
+const BUILT_IN_PLAYLISTS: Playlist[] = Object.entries(DEFAULT_PLAYLISTS)
+  .filter(([, v]) => v.youtubeUrl !== "")  // skip empty "custom" entry
+  .map(([, v], i) => ({ ...v, id: `default-${i}`, isCustom: false }));
+
 export const useMusicStore = create<MusicState>((set, get) => ({
   isPlaying: false,
   currentTrack: null,
   volume: 60,
-  availablePlaylists: [],
+  availablePlaylists: BUILT_IN_PLAYLISTS,
   isLoading: false,
   error: null,
   _playerReady: false,
@@ -77,13 +82,16 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await playlists.list();
-      set({ availablePlaylists: res.results ?? [], isLoading: false });
+      const remote = res.results ?? [];
+      // Only replace if API returned actual playlists
+      if (remote.length > 0) {
+        set({ availablePlaylists: remote, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
     } catch {
-      // Fallback to built-in defaults — API may not exist yet
-      const builtIn: Playlist[] = Object.entries(DEFAULT_PLAYLISTS).map(
-        ([, v], i) => ({ ...v, id: `default-${i}`, isCustom: false })
-      );
-      set({ availablePlaylists: builtIn, isLoading: false });
+      // Keep built-in defaults (already in state)
+      set({ isLoading: false });
     }
   },
 
