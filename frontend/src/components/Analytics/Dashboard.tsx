@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { FocusChart, FocusChartLegend } from "./FocusChart";
 import { CategoryPie } from "./CategoryPie";
 import { DensityChart } from "./DensityChart";
 import { StreakCalendar } from "./StreakCalendar";
 import { FocusScore } from "./FocusScore";
-import { analytics } from "../../api/phase4";
-import type { DailyStats, DensityEntry, StreakInfo, FocusScoreBreakdown } from "../../types/phase4";
+import { useAnalyticsStore } from "../../hooks/useAnalytics";
+import type { DailyStats } from "../../types/phase4";
 import type { FlowMode } from "../../types";
 import { Clock, Activity, Target, Flame, AlertCircle } from "lucide-react";
 
@@ -40,34 +40,16 @@ const Card: React.FC<CardProps> = ({ title, icon, children, className = "" }) =>
   </div>
 );
 
+const RANGE_DAYS: Record<DateRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
+
 export const Dashboard: React.FC = () => {
   const [range, setRange] = useState<DateRange>("30d");
-  const [daily, setDaily] = useState<DailyStats[]>([]);
-  const [density, setDensity] = useState<DensityEntry[]>([]);
-  const [streak, setStreak] = useState<StreakInfo | null>(null);
-  const [focusScore, setFocusScore] = useState<FocusScoreBreakdown | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const rangeDays: Record<DateRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const from = subtractDays(rangeDays[range]);
-      const [dailyData, densityData, streakData, scoreData] = await Promise.all([
-        analytics.daily({ from }), analytics.density({ weeks: "52" }),
-        analytics.streak(), analytics.focusScore(),
-      ]);
-      setDaily(Array.isArray(dailyData) ? dailyData : []);
-      setDensity(Array.isArray(densityData) ? densityData : []);
-      setStreak(streakData ?? null);
-      setFocusScore(scoreData ?? null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load analytics");
-    } finally { setLoading(false); }
-  }, [range]);
+  const { daily, density, streak, focusScore, isLoading, error, fetchAll } = useAnalyticsStore();
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    fetchAll(subtractDays(RANGE_DAYS[range]));
+  }, [range, fetchAll]);
 
   const byMode = mergeByMode(daily);
   const totalMinutes = daily.reduce((s, d) => s + d.totalMinutes, 0);
@@ -119,19 +101,19 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="Focus Minutes / Day" icon={<Activity className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-2">
-          {loading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <><FocusChart data={daily} /><FocusChartLegend /></>}
+          {isLoading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <><FocusChart data={daily} /><FocusChartLegend /></>}
         </Card>
         <Card title="Mode Distribution" icon={<Target className="w-3.5 h-3.5 text-ase-gold" />}>
-          {loading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <CategoryPie byMode={byMode} />}
+          {isLoading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <CategoryPie byMode={byMode} />}
         </Card>
         <Card title="Activity Heatmap" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-2">
-          {loading ? <div className="h-32 animate-pulse bg-ase-surface rounded-xl" /> : <DensityChart data={density} weeks={52} />}
+          {isLoading ? <div className="h-32 animate-pulse bg-ase-surface rounded-xl" /> : <DensityChart data={density} weeks={52} />}
         </Card>
         <Card title="Focus Score" icon={<Target className="w-3.5 h-3.5 text-ase-gold" />}>
-          {loading || !focusScore ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <FocusScore score={focusScore} />}
+          {isLoading || !focusScore ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <FocusScore score={focusScore} />}
         </Card>
         <Card title="Streak Calendar" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-3">
-          {loading || !streak ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <div className="max-w-sm"><StreakCalendar streak={streak} /></div>}
+          {isLoading || !streak ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <div className="max-w-sm"><StreakCalendar streak={streak} /></div>}
         </Card>
       </div>
     </div>

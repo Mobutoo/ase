@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import type { LeaderboardEntry, LeaderboardPeriod } from "../../types/phase4";
-import { leaderboard as leaderboardApi } from "../../api/phase4";
+import { useLeaderboardStore } from "../../hooks/useLeaderboard";
 import { MemberProfile } from "./MemberProfile";
 
 const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
@@ -103,26 +103,17 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, onClick }) => {
 };
 
 export const Leaderboard: React.FC = () => {
-  const [period, setPeriod] = useState<LeaderboardPeriod>("week");
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { entries, period, isLoading, error, fetchLeaderboard, setPeriod } = useLeaderboardStore();
   const [selected, setSelected] = useState<LeaderboardEntry | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await leaderboardApi.list(period);
-      setEntries(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load leaderboard");
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
+  useEffect(() => {
+    fetchLeaderboard(period);
+  }, [period, fetchLeaderboard]);
 
-  useEffect(() => { load(); }, [load]);
+  const handlePeriodChange = (p: LeaderboardPeriod) => {
+    setPeriod(p);
+    setSelected(null);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -131,7 +122,7 @@ export const Leaderboard: React.FC = () => {
         {(Object.keys(PERIOD_LABELS) as LeaderboardPeriod[]).map((p) => (
           <button
             key={p}
-            onClick={() => { setPeriod(p); setSelected(null); }}
+            onClick={() => handlePeriodChange(p)}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
               period === p
                 ? "bg-[#f59e0b] text-[#0f0f0f]"
@@ -152,7 +143,7 @@ export const Leaderboard: React.FC = () => {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* List */}
         <div className="flex-1 flex flex-col gap-2">
-          {loading ? (
+          {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-16 bg-[#1a1a2e] border border-[#2a2a3e] rounded-xl animate-pulse" />
             ))

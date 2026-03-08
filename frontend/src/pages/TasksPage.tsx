@@ -3,9 +3,13 @@ import { MusicPlayer } from "../components/Music/MusicPlayer";
 import { MiniPlayer } from "../components/Music/MiniPlayer";
 import { EnergyCheck } from "../components/Energy/EnergyCheck";
 import { EnergyHeatmap } from "../components/Energy/EnergyHeatmap";
+import { EnergyPrediction } from "../components/Energy/EnergyPrediction";
+import { useEnergyStore } from "../hooks/useEnergy";
 import { Flame, Lightbulb } from "lucide-react";
 
 export function TasksPage() {
+  const prediction = useEnergyStore((s) => s.prediction);
+
   return (
     <>
       <div className="min-h-screen bg-ase-bg pb-20">
@@ -65,23 +69,29 @@ export function TasksPage() {
                 <EnergyHeatmap />
               </div>
 
-              {/* Tip card */}
+              {/* Energy prediction or static tip */}
               <div className="card p-4 relative overflow-hidden animate-slide-up" style={{ animationDelay: "0.25s" }}>
                 <div className="absolute inset-0 bg-gradient-to-br from-ase-gold/[0.03] to-transparent pointer-events-none" />
-                <div className="relative flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Lightbulb className="w-4 h-4 text-ase-gold" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-ase-gold mb-1 uppercase tracking-wider">
-                      Pro Tip
-                    </p>
-                    <p className="text-xs text-ase-muted leading-relaxed">
-                      Click{" "}
-                      <span className="text-ase-gold font-medium">Start Working</span> on a
-                      task to link it with your next focus session.
-                    </p>
-                  </div>
+                <div className="relative">
+                  {prediction ? (
+                    <EnergyPrediction />
+                  ) : (
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center flex-shrink-0">
+                        <Lightbulb className="w-4 h-4 text-ase-gold" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-ase-gold mb-1 uppercase tracking-wider">
+                          Pro Tip
+                        </p>
+                        <p className="text-xs text-ase-muted leading-relaxed">
+                          Click{" "}
+                          <span className="text-ase-gold font-medium">Start Working</span> on a
+                          task to link it with your next focus session.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

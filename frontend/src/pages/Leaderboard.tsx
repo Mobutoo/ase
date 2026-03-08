@@ -1,9 +1,8 @@
+import { useState, useEffect } from "react";
 import { Leaderboard as LeaderboardComponent } from "../components/Social/Leaderboard";
 import { AchievementGrid } from "../components/Social/AchievementGrid";
 import { Rewards } from "../components/Social/Rewards";
-import { analytics as analyticsApi, leaderboard as leaderboardApi } from "../api/phase4";
-import type { Achievement, Reward } from "../types/phase4";
-import { useState, useEffect } from "react";
+import { useLeaderboardStore } from "../hooks/useLeaderboard";
 import { Trophy, Award, Medal } from "lucide-react";
 
 type Tab = "leaderboard" | "achievements" | "rewards";
@@ -16,27 +15,23 @@ const TAB_CONFIG: Record<Tab, { label: string; icon: typeof Trophy }> = {
 
 export function Leaderboard() {
   const [tab, setTab] = useState<Tab>("leaderboard");
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [loadingAch, setLoadingAch] = useState(false);
-  const [loadingRew, setLoadingRew] = useState(false);
+
+  const {
+    achievements,
+    rewards,
+    isLoading,
+    fetchAchievements,
+    fetchRewards,
+  } = useLeaderboardStore();
 
   useEffect(() => {
     if (tab === "achievements" && achievements.length === 0) {
-      setLoadingAch(true);
-      analyticsApi.achievements()
-        .then((data) => setAchievements(Array.isArray(data) ? data : []))
-        .catch(() => {})
-        .finally(() => setLoadingAch(false));
+      fetchAchievements();
     }
     if (tab === "rewards" && rewards.length === 0) {
-      setLoadingRew(true);
-      leaderboardApi.rewards()
-        .then((data) => setRewards(Array.isArray(data) ? data : []))
-        .catch(() => {})
-        .finally(() => setLoadingRew(false));
+      fetchRewards();
     }
-  }, [tab]);
+  }, [tab, achievements.length, rewards.length, fetchAchievements, fetchRewards]);
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-10 min-h-screen">
@@ -74,7 +69,7 @@ export function Leaderboard() {
         {tab === "leaderboard" && <LeaderboardComponent />}
 
         {tab === "achievements" && (
-          loadingAch ? (
+          isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-32 card animate-pulse" />
@@ -86,7 +81,7 @@ export function Leaderboard() {
         )}
 
         {tab === "rewards" && (
-          loadingRew ? (
+          isLoading ? (
             <div className="h-48 card animate-pulse" />
           ) : (
             <Rewards rewards={rewards} />

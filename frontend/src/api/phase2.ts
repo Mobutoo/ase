@@ -102,11 +102,11 @@ export const playlists = {
     request<void>(`/api/v1/playlists/${id}/`, { method: "DELETE" }),
 };
 
-// --- Energy Heatmap ---
+// --- Energy Analytics ---
 export const energyApi = {
   heatmap: (params?: Record<string, string>) => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return request<EnergyHeatmapEntry[]>(`/api/v1/energy/heatmap/${qs}`);
+    return request<EnergyHeatmapEntry[]>(`/api/v1/energy-analytics/heatmap/${qs}`);
   },
 
   predict: (params?: { hour?: number; dayOfWeek?: number }) => {
@@ -117,6 +117,6 @@ export const energyApi = {
           .map(([k, v]) => [k, String(v)])
       )
     ).toString() : "";
-    return request<EnergyPrediction>(`/api/v1/energy/predict/${qs}`);
+    return request<EnergyPrediction>(`/api/v1/energy-analytics/predict/${qs}`);
   },
 };

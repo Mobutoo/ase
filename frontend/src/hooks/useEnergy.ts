@@ -16,6 +16,8 @@ interface EnergyState {
   // Actions
   fetchReadings: () => Promise<void>;
   submitReading: (level: number, context?: EnergyContext, sessionId?: number) => Promise<void>;
+  /** Alias for submitReading — logs an energy level with optional context. */
+  logEnergy: (level: number, context?: EnergyContext) => Promise<void>;
   fetchHeatmap: () => Promise<void>;
   fetchPrediction: (hour?: number, dayOfWeek?: number) => Promise<void>;
   clearError: () => void;
@@ -70,7 +72,7 @@ export const useEnergyStore = create<EnergyState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const entries = await energyApi.heatmap();
-      set({ heatmap: entries, isLoading: false });
+      set({ heatmap: entries ?? [], isLoading: false });
     } catch (err) {
       set({
         isLoading: false,
@@ -87,6 +89,11 @@ export const useEnergyStore = create<EnergyState>((set) => ({
     } catch {
       // Prediction is best-effort — ignore errors
     }
+  },
+
+  logEnergy: async (level, context = "check_in") => {
+    const { submitReading } = useEnergyStore.getState();
+    await submitReading(level, context);
   },
 
   clearError: () => set({ error: null }),
