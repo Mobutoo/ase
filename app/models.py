@@ -317,6 +317,48 @@ class Rewards(models.Model):
         {self.silver}, {self.bronze}, {self.ranks}'''
 
 
+AI_SUGGESTION_TYPE_CHOICES = (
+    ("daily_plan", "Daily Plan"),
+    ("task_decomposition", "Task Decomposition"),
+    ("reflection_prompt", "Reflection Prompt"),
+    ("energy_suggestion", "Energy Suggestion"),
+)
+
+
+class AISuggestion(models.Model):
+    """AI-generated suggestion stored after n8n/OpenClaw processing."""
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name="ai_suggestions",
+    )
+    suggestion_type = models.CharField(
+        max_length=32,
+        choices=AI_SUGGESTION_TYPE_CHOICES,
+    )
+    content = models.JSONField(help_text="Structured suggestion data from AI")
+    accepted = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="True=accepted, False=dismissed, None=pending user action",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} | {self.suggestion_type} | {self.created_at}"
+
+
+# ---------------------------------------------------------------------------
+# Import phase-specific models so Django migration system discovers them.
+# These live in separate files for maintainability but are part of the "app".
+# ---------------------------------------------------------------------------
+from app.models_phase2 import TaskSourceConfig, Playlist  # noqa: E402, F401
+from app.models_phase34 import Achievement, DailyPlan  # noqa: E402, F401
+
+
 class Statistics:
 
     @staticmethod

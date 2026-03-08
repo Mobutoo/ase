@@ -162,3 +162,11 @@ STATICFILES_DIRS = []
 
 # --- Default PK ---
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- n8n / OpenClaw Webhook Integration ---
+# Outbound: Ase → n8n
+N8N_WEBHOOK_SESSION = os.environ.get("N8N_WEBHOOK_SESSION", "")
+N8N_WEBHOOK_DAILY_PLAN = os.environ.get("N8N_WEBHOOK_DAILY_PLAN", "")
+N8N_WEBHOOK_REFLECTION = os.environ.get("N8N_WEBHOOK_REFLECTION", "")
+# Inbound: n8n → Ase (shared secret validated in X-Webhook-Secret header)
+N8N_WEBHOOK_SECRET = os.environ.get("N8N_WEBHOOK_SECRET", "")

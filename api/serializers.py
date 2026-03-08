@@ -1,11 +1,12 @@
 from rest_framework import serializers
 
 from app.models import (
-    Session,
-    LocalTask,
+    AISuggestion,
     EnergyReading,
-    UserSettings,
+    LocalTask,
     MODE_DEFAULTS,
+    Session,
+    UserSettings,
 )
 
 
@@ -93,6 +94,23 @@ class EnergyReadingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class AISuggestionSerializer(serializers.ModelSerializer):
+    """Read-only serializer for AI suggestions."""
+    username = serializers.CharField(source="user.username", read_only=True)
+
+    class Meta:
+        model = AISuggestion
+        fields = [
+            "id",
+            "username",
+            "suggestion_type",
+            "content",
+            "accepted",
+            "created_at",
+        ]
+        read_only_fields = ["id", "username", "created_at"]
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):

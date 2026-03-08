@@ -3,17 +3,47 @@ from rest_framework.routers import DefaultRouter
 
 from . import views
 from .viewsets import (
-    SessionViewSet,
-    LocalTaskViewSet,
+    AISuggestionViewSet,
     EnergyReadingViewSet,
+    LocalTaskViewSet,
+    SessionViewSet,
     UserSettingsViewSet,
+    WebhookViewSet,
+)
+from .viewsets_phase2 import (
+    PlaylistViewSet,
+    TaskSourceConfigViewSet,
+    UnifiedTaskViewSet,
+)
+from .viewsets_phase34 import (
+    AnalyticsViewSet,
+    DailyPlanViewSet,
+    EnergyAnalyticsViewSet,
+    LeaderboardViewSet,
 )
 
 # DRF router for v1 API
 router = DefaultRouter()
+
+# Phase 1 — Core
 router.register(r"sessions", SessionViewSet, basename="session")
 router.register(r"tasks", LocalTaskViewSet, basename="localtask")
 router.register(r"energy", EnergyReadingViewSet, basename="energyreading")
+
+# Phase 2 — Task Bridge + Music
+router.register(r"unified-tasks", UnifiedTaskViewSet, basename="unifiedtask")
+router.register(r"playlists", PlaylistViewSet, basename="playlist")
+router.register(r"task-sources", TaskSourceConfigViewSet, basename="tasksource")
+
+# Phase 3+4 — Analytics + Gamification
+router.register(r"analytics", AnalyticsViewSet, basename="analytics")
+router.register(r"leaderboard", LeaderboardViewSet, basename="leaderboard")
+router.register(r"plans", DailyPlanViewSet, basename="dailyplan")
+router.register(r"energy-analytics", EnergyAnalyticsViewSet, basename="energyanalytics")
+
+# Phase 5 — AI Copilot
+router.register(r"ai/suggestions", AISuggestionViewSet, basename="aisuggestion")
+router.register(r"webhooks", WebhookViewSet, basename="webhook")
 
 urlpatterns = [
     # Health check
