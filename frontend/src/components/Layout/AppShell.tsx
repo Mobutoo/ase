@@ -7,11 +7,12 @@ import {
   Trophy,
   Settings,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { MiniPlayer } from "../Music/MiniPlayer";
 import { YouTubeEmbed } from "../Music/YouTubeEmbed";
+import { useTimerStore } from "../../hooks/useTimer";
 
 const MAIN_NAV = [
   { path: "/", label: "Focus", icon: Timer },
@@ -93,42 +94,65 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Focus immersive mode: sidebar hides when timer is active on Focus page
+  const timerPhase = useTimerStore((s) => s.phase);
+  const isImmersive = location.pathname === "/" && timerPhase !== "idle";
+
+  // Effective sidebar pixel width
+  const sidebarWidth = isImmersive ? 0 : collapsed ? 72 : 220;
+
   return (
     <div className="min-h-screen bg-[#09090b] flex">
       {/* Sidebar */}
       <nav
         className={[
-          collapsed ? "w-[72px]" : "w-[220px]",
           "bg-[#09090b]",
           "border-r border-zinc-800/50",
           "flex flex-col",
           "transition-all duration-300 ease-out",
           "relative z-10",
           "h-screen sticky top-0",
+          "overflow-hidden flex-shrink-0",
+          isImmersive ? "opacity-0 pointer-events-none" : "opacity-100",
         ].join(" ")}
+        style={{ width: `${sidebarWidth}px` }}
       >
-        {/* Logo area */}
-        <div className="h-16 flex items-center gap-3 px-4 border-b border-zinc-800/50 flex-shrink-0">
-          {/* Gold dot with glow */}
-          <div
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{
-              backgroundColor: "#f59e0b",
-              boxShadow:
-                "0 0 8px rgba(245, 158, 11, 0.6), 0 0 16px rgba(245, 158, 11, 0.3)",
-            }}
-          />
+        {/* Logo + collapse toggle (top) */}
+        <div className="h-16 flex items-center gap-2 px-3 border-b border-zinc-800/50 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Gold dot with glow */}
+            <div
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{
+                backgroundColor: "#f59e0b",
+                boxShadow:
+                  "0 0 8px rgba(245, 158, 11, 0.6), 0 0 16px rgba(245, 158, 11, 0.3)",
+              }}
+            />
 
-          {!collapsed && (
-            <div className="animate-fade-in overflow-hidden">
-              <h1 className="text-sm font-mono font-bold text-zinc-50 leading-tight tracking-tight">
-                ASÉ
-              </h1>
-              <p className="text-xs text-zinc-500 leading-none">
-                Flow Engine
-              </p>
-            </div>
-          )}
+            {!collapsed && (
+              <div className="animate-fade-in overflow-hidden">
+                <h1 className="text-sm font-mono font-bold text-zinc-50 leading-tight tracking-tight">
+                  ASÉ
+                </h1>
+                <p className="text-xs text-zinc-500 leading-none">
+                  Flow Engine
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200 flex-shrink-0"
+          >
+            {collapsed ? (
+              <PanelLeft className="w-3.5 h-3.5" />
+            ) : (
+              <PanelLeftClose className="w-3.5 h-3.5" />
+            )}
+          </button>
         </div>
 
         {/* Main nav */}
@@ -189,26 +213,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-
-        {/* Collapse toggle */}
-        <div className="h-10 flex items-center justify-center border-t border-zinc-800/50 flex-shrink-0">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="
-              flex items-center justify-center w-full h-full
-              text-zinc-500 hover:text-zinc-300
-              hover:bg-zinc-800/50
-              transition-all duration-200
-            "
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
-        </div>
       </nav>
 
       {/* Main content */}
@@ -216,7 +220,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Global music player — persists across all pages */}
       <YouTubeEmbed />
-      <MiniPlayer />
+      <MiniPlayer leftOffset={sidebarWidth} dimmed={isImmersive} />
     </div>
   );
 }

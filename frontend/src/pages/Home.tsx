@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { FlowTimer } from "../components/Timer/FlowTimer";
 import { useTimerStore } from "../hooks/useTimer";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 export function Home() {
   useEffect(() => {
@@ -12,10 +13,38 @@ export function Home() {
   const phase = useTimerStore((s) => s.phase);
   const isActive = phase !== "idle";
 
+  // --- Fullscreen management ---
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  // Exit fullscreen when timer returns to idle
+  useEffect(() => {
+    if (!isActive && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, [isActive]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
-      {/* Background ambient glow */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* Background ambient glow — dims during focus */}
+      <div
+        className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${
+          isActive ? "opacity-40" : ""
+        }`}
+      >
         <div
           className={`
             absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -32,6 +61,27 @@ export function Home() {
         <div className="absolute top-40 right-40 w-2 h-2 bg-ase-gold/30 rounded-full animate-float" />
         <div className="absolute bottom-60 left-40 w-1.5 h-1.5 bg-ase-gold/20 rounded-full animate-float" style={{ animationDelay: "1s" }} />
       </div>
+
+      {/* Fullscreen toggle — visible only when timer is active */}
+      {isActive && (
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          className="
+            absolute top-6 right-6 z-20
+            flex items-center justify-center w-10 h-10 rounded-xl
+            bg-zinc-800/40 border border-zinc-700/30
+            text-zinc-500 hover:text-white hover:bg-zinc-700/50 hover:border-zinc-600/50
+            transition-all duration-200 backdrop-blur-sm
+          "
+        >
+          {isFullscreen ? (
+            <Minimize2 className="w-4 h-4" />
+          ) : (
+            <Maximize2 className="w-4 h-4" />
+          )}
+        </button>
+      )}
 
       <div className="relative z-10 flex flex-col items-center gap-6 animate-fade-in">
         {!isActive && (
