@@ -87,6 +87,7 @@ class UserSettings(models.Model):
         ('aquamarine', 'aquamarine'),
         ('garnet', 'garnet'),
         ('coral', 'coral'),
+        ('afrofuturist', 'afrofuturist'),
     )
 
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE,

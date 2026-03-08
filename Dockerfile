@@ -1,26 +1,32 @@
+###############
+# FRONTEND    #
+###############
+
+FROM node:20-alpine AS frontend
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci --ignore-scripts
+COPY frontend/ ./
+RUN npm run build
+
+
 ###########
 # BUILDER #
 ###########
 
 FROM python:3.11-slim-bookworm AS builder
 
-# set work directory
 WORKDIR /usr/src/app
 
-# set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc
+    apt-get install -y --no-install-recommends gcc && \
+    rm -rf /var/lib/apt/lists/*
 
-# lint
-RUN pip install --upgrade pip
-COPY . /usr/src/app/
-
-# install python dependencies
-COPY ./requirements.txt .
+COPY requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
 
@@ -30,34 +36,36 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requir
 
 FROM python:3.11-slim-bookworm
 
-# create directory for the app user
-RUN mkdir -p /home/app
+# Create app user
+RUN groupadd -r app && useradd -r -g app app
 
-# create the app user
-RUN addgroup --system app && adduser --system --group app
-
-# create the appropriate directories
+# Set up directories
 ENV HOME=/home/app
-ENV APP_HOME=/home/app/pomotracker
-RUN mkdir $APP_HOME && mkdir $APP_HOME/staticfiles
+ENV APP_HOME=/home/app/ase
+RUN mkdir -p $APP_HOME/staticfiles/frontend
 WORKDIR $APP_HOME
 
-# install dependencies
-RUN apt-get update
+# Install dependencies
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install --no-cache /wheels/*
+RUN pip install --upgrade pip && \
+    pip install --no-cache /wheels/* && \
+    rm -rf /wheels
 
-# copy project
+# Copy project
 COPY . $APP_HOME
 
-# migrate db changes ORM and collect static files
-RUN rm -rf ${APP_HOME}/staticfiles/app && \
-    cp -r ${APP_HOME}/app/static/* ${APP_HOME}/staticfiles/
+# Copy frontend build
+COPY --from=frontend /app/frontend/dist $APP_HOME/staticfiles/frontend
 
-# chown all the files to the app user
+# Collect static files (Django legacy + React)
+RUN cp -r ${APP_HOME}/app/static/* ${APP_HOME}/staticfiles/ 2>/dev/null || true
+
+# Set ownership
 RUN chown -R app:app $APP_HOME
 
-# change to the app user
 USER app
+
+EXPOSE 8000
+
+CMD ["gunicorn", "ase_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "300"]

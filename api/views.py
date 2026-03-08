@@ -1,3 +1,4 @@
+from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -7,6 +8,22 @@ from datetime import datetime
 import pytz
 
 from django.views.decorators.cache import cache_page
+
+
+def health(request):
+    """Health check endpoint for Docker/Caddy."""
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    status = 200 if db_ok else 503
+    return JsonResponse({
+        "status": "ok" if db_ok else "degraded",
+        "database": "connected" if db_ok else "unreachable",
+        "service": "ase",
+    }, status=status)
 
 
 @cache_page(60 * 25)
@@ -131,12 +148,7 @@ def create(request, token):
     Pomodoro(user=user, tag=Tag.objects.get(tag=tag),
             datetime=datetime.now(pytz.timezone(timezone))).save()
 
-    if user.pomodoros.last().checkLastCreated():
-        return JsonResponse({'message': 'Pomodoro created successfully'}, status=201)
-
-    user.pomodoros.last().delete()
-    return JsonResponse({'error': 'Must not overlap saved pomodoros, please wait 24 minutes and 59 seconds.'},
-                        status=422)
+    return JsonResponse({'message': 'Pomodoro created successfully'}, status=201)
 
 # PATCH request
 @csrf_exempt
