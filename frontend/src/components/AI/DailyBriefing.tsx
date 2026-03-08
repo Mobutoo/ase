@@ -1,4 +1,5 @@
 import { CalendarDays, RefreshCw, Brain, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAIStore } from "../../hooks/useAI";
 import type { AISuggestion, DailyPlanContent, DailyPlanItem } from "../../types/phase5";
 
@@ -52,14 +53,15 @@ function PlanItem({ item, index }: { item: DailyPlanItem; index: number }) {
 }
 
 function EmptyPlan({ onRequest, isLoading }: { onRequest: () => void; isLoading: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4 border border-dashed border-[#2a2a3e] rounded-xl">
       <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/5 border border-[#f59e0b]/10 flex items-center justify-center mb-3">
         <Brain className="w-5 h-5 text-[#f59e0b]/40" />
       </div>
-      <p className="text-sm text-[#8a8aae] text-center mb-1">No daily plan yet</p>
+      <p className="text-sm text-[#8a8aae] text-center mb-1">{t("ai.no_plan")}</p>
       <p className="text-xs text-[#5a5a7e] text-center mb-4 leading-relaxed">
-        Request a plan and the AI will analyse your tasks and energy to schedule your day.
+        {t("ai.no_plan_help")}
       </p>
       <button
         onClick={onRequest}
@@ -67,7 +69,7 @@ function EmptyPlan({ onRequest, isLoading }: { onRequest: () => void; isLoading:
         className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 hover:bg-[#f59e0b]/20 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <RefreshCw className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
-        {isLoading ? "Requesting..." : "Generate Today's Plan"}
+        {isLoading ? t("ai.requesting") : t("ai.generate_plan")}
       </button>
     </div>
   );
@@ -76,6 +78,7 @@ function EmptyPlan({ onRequest, isLoading }: { onRequest: () => void; isLoading:
 // --- Main component ---
 
 export function DailyBriefing() {
+  const { t } = useTranslation();
   const suggestions = useAIStore((s) => s.suggestions);
   const isRequestingPlan = useAIStore((s) => s.isRequestingPlan);
   const requestDailyPlan = useAIStore((s) => s.requestDailyPlan);
@@ -98,7 +101,7 @@ export function DailyBriefing() {
             <CalendarDays className="w-4 h-4 text-[#f59e0b]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Today's Plan</h3>
+            <h3 className="text-sm font-semibold text-white">{t("ai.plan_title")}</h3>
             <p className="text-xs text-[#8a8aae]">
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
             </p>
@@ -113,7 +116,7 @@ export function DailyBriefing() {
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-[#8a8aae] hover:bg-[#2a2a3e] hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3 h-3 ${isRequestingPlan ? "animate-spin" : ""}`} />
-            {isRequestingPlan ? "Requesting..." : "New Plan"}
+            {isRequestingPlan ? t("ai.requesting") : t("ai.new_plan")}
           </button>
         )}
       </div>
@@ -139,7 +142,7 @@ export function DailyBriefing() {
             <p className="text-sm text-[#8a8aae] leading-relaxed">
               {typeof planContent === "object" && planContent !== null
                 ? JSON.stringify(planSuggestion.content, null, 2)
-                : "No plan items found."}
+                : t("ai.no_plan_items")}
             </p>
           )}
         </div>

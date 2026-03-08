@@ -21,6 +21,7 @@ SOURCE_TYPE_CHOICES = (
     ("local", "Local (Ase)"),
     ("plane", "Plane"),
     ("github", "GitHub Issues"),
+    ("superproductivity", "Super Productivity"),
 )
 
 

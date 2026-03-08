@@ -1,5 +1,5 @@
 import type { FlowMode } from "../../types";
-import { MODE_LABELS } from "../../types";
+import { useTranslation } from "react-i18next";
 import { useTimerStore } from "../../hooks/useTimer";
 import { Sparkles, Timer, Gamepad2, Zap, Waves } from "lucide-react";
 
@@ -44,6 +44,7 @@ const MODE_CONFIG: Record<FlowMode, {
 };
 
 export function ModeSelector() {
+  const { t } = useTranslation();
   const mode = useTimerStore((s) => s.mode);
   const status = useTimerStore((s) => s.status);
   const setMode = useTimerStore((s) => s.setMode);
@@ -75,7 +76,7 @@ export function ModeSelector() {
             }}
           >
             <Icon className="w-4 h-4" />
-            {MODE_LABELS[m]}
+            {t(`mode.${m}`)}
           </button>
         );
       })}

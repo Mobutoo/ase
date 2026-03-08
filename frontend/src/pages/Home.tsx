@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FlowTimer } from "../components/Timer/FlowTimer";
 import { useTimerStore } from "../hooks/useTimer";
 import { Maximize2, Minimize2 } from "lucide-react";
 
 export function Home() {
+  const { t } = useTranslation();
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
@@ -66,7 +68,7 @@ export function Home() {
       {isActive && (
         <button
           onClick={toggleFullscreen}
-          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          title={isFullscreen ? t("timer.fullscreen_exit") : t("timer.fullscreen_enter")}
           className="
             absolute top-6 right-6 z-20
             flex items-center justify-center w-10 h-10 rounded-xl
@@ -90,7 +92,7 @@ export function Home() {
               Asé
             </h2>
             <p className="text-ase-muted text-sm mt-2 tracking-wide">
-              The power to make things happen
+              {t("app.motto")}
             </p>
           </div>
         )}

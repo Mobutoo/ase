@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { TaskPriority } from "../../types";
 import type { CreateTaskPayload } from "../../types/phase2";
 import { useTasksStore } from "../../hooks/useTasks";
@@ -8,12 +9,12 @@ interface AddTaskModalProps {
   onClose: () => void;
 }
 
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-  { value: "urgent", label: "Urgent" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
-  { value: "none", label: "None" },
+const PRIORITY_OPTIONS: { value: TaskPriority; i18nKey: string }[] = [
+  { value: "urgent", i18nKey: "priority.urgent" },
+  { value: "high", i18nKey: "priority.high" },
+  { value: "medium", i18nKey: "priority.medium" },
+  { value: "low", i18nKey: "priority.low" },
+  { value: "none", i18nKey: "priority.none" },
 ];
 
 const INITIAL_FORM: CreateTaskPayload = {
@@ -26,6 +27,7 @@ const INITIAL_FORM: CreateTaskPayload = {
 };
 
 export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
+  const { t } = useTranslation();
   const addLocalTask = useTasksStore((s) => s.addLocalTask);
   const isLoading = useTasksStore((s) => s.isLoading);
 
@@ -76,7 +78,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
       <div className="bg-[#1a1a2e] border border-[#2a2a3e] rounded-2xl w-full max-w-md shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#2a2a3e]">
-          <h2 className="text-lg font-semibold text-white">New Task</h2>
+          <h2 className="text-lg font-semibold text-white">{t("task_form.new_task")}</h2>
           <button
             onClick={onClose}
             className="text-[#8a8aae] hover:text-white transition-colors text-xl leading-none"
@@ -90,13 +92,13 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
           {/* Title */}
           <div>
             <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-              Title <span className="text-red-400">*</span>
+              {t("task_form.title")} <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => handleFieldChange("title", e.target.value)}
-              placeholder="What needs to be done?"
+              placeholder={t("task_form.title_placeholder")}
               required
               className="
                 w-full bg-[#0f0f1a] border border-[#2a2a3e] rounded-lg
@@ -109,12 +111,12 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
           {/* Description */}
           <div>
             <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-              Description
+              {t("task_form.description")}
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleFieldChange("description", e.target.value)}
-              placeholder="Optional details..."
+              placeholder={t("task_form.description_placeholder")}
               rows={3}
               className="
                 w-full bg-[#0f0f1a] border border-[#2a2a3e] rounded-lg
@@ -128,7 +130,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-                Priority
+                {t("task_form.priority")}
               </label>
               <select
                 value={form.priority}
@@ -143,7 +145,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
               >
                 {PRIORITY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.i18nKey)}
                   </option>
                 ))}
               </select>
@@ -151,7 +153,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
 
             <div>
               <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-                Est. Minutes
+                {t("task_form.est_minutes")}
               </label>
               <input
                 type="number"
@@ -164,7 +166,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                     e.target.value ? Number(e.target.value) : null
                   )
                 }
-                placeholder="e.g. 30"
+                placeholder={t("task_form.minutes_placeholder")}
                 className="
                   w-full bg-[#0f0f1a] border border-[#2a2a3e] rounded-lg
                   px-3 py-2 text-sm text-white placeholder-[#4a4a6e]
@@ -177,7 +179,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
           {/* Due date */}
           <div>
             <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-              Due Date
+              {t("task_form.due_date")}
             </label>
             <input
               type="date"
@@ -196,7 +198,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
           {/* Labels */}
           <div>
             <label className="block text-xs font-medium text-[#8a8aae] mb-1">
-              Labels
+              {t("task_form.labels")}
             </label>
             <div className="flex gap-2">
               <input
@@ -209,7 +211,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                     handleAddLabel();
                   }
                 }}
-                placeholder="Add label, press Enter"
+                placeholder={t("task_form.labels_placeholder")}
                 className="
                   flex-1 bg-[#0f0f1a] border border-[#2a2a3e] rounded-lg
                   px-3 py-2 text-sm text-white placeholder-[#4a4a6e]
@@ -225,7 +227,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                   hover:bg-[#f59e0b]/30 transition-colors
                 "
               >
-                Add
+                {t("task_form.add")}
               </button>
             </div>
             {(form.labels ?? []).length > 0 && (
@@ -263,7 +265,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                 hover:border-[#3a3a4e] hover:text-white transition-colors
               "
             >
-              Cancel
+              {t("task_form.cancel")}
             </button>
             <button
               type="submit"
@@ -275,7 +277,7 @@ export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              {isLoading ? "Creating..." : "Create Task"}
+              {isLoading ? t("tasks.creating") : t("tasks.create")}
             </button>
           </div>
         </form>

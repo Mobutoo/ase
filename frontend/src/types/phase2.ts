@@ -1,7 +1,7 @@
 import type { TaskStatus, TaskPriority } from "./index";
 
 // --- Task Sources ---
-export type TaskSource = "local" | "plane" | "github";
+export type TaskSource = "local" | "plane" | "github" | "superproductivity";
 
 // --- Unified Task ---
 export interface UnifiedTask {

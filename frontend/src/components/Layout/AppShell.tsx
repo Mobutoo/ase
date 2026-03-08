@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Timer,
   ListTodo,
@@ -15,15 +16,15 @@ import { YouTubeEmbed } from "../Music/YouTubeEmbed";
 import { useTimerStore } from "../../hooks/useTimer";
 
 const MAIN_NAV = [
-  { path: "/", label: "Focus", icon: Timer },
-  { path: "/tasks", label: "Tasks", icon: ListTodo },
-  { path: "/analytics", label: "Analytics", icon: BarChart3 },
-  { path: "/leaderboard", label: "Board", icon: Trophy },
+  { path: "/", labelKey: "nav.focus", icon: Timer },
+  { path: "/tasks", labelKey: "nav.tasks", icon: ListTodo },
+  { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+  { path: "/leaderboard", labelKey: "nav.board", icon: Trophy },
 ];
 
 const BOTTOM_NAV = [
-  { path: "/ai", label: "AI Copilot", icon: Sparkles },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/ai", labelKey: "nav.ai", icon: Sparkles },
+  { path: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 const USER_INITIALS = "A";
@@ -31,17 +32,19 @@ const USER_NAME = "Admin";
 
 function NavItem({
   path,
-  label,
+  labelKey,
   icon: Icon,
   isActive,
   collapsed,
 }: {
   path: string;
-  label: string;
+  labelKey: string;
   icon: React.ElementType;
   isActive: boolean;
   collapsed: boolean;
 }) {
+  const { t } = useTranslation();
+  const label = t(labelKey);
   return (
     <Link
       to={path}
@@ -91,6 +94,7 @@ function NavItem({
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -133,10 +137,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!collapsed && (
               <div className="animate-fade-in overflow-hidden">
                 <h1 className="text-sm font-mono font-bold text-zinc-50 leading-tight tracking-tight">
-                  ASÉ
+                  {t("app.name")}
                 </h1>
                 <p className="text-xs text-zinc-500 leading-none">
-                  Flow Engine
+                  {t("app.tagline")}
                 </p>
               </div>
             )}
@@ -144,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => setCollapsed(!collapsed)}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200 flex-shrink-0"
           >
             {collapsed ? (
@@ -161,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavItem
               key={item.path}
               path={item.path}
-              label={item.label}
+              labelKey={item.labelKey}
               icon={item.icon}
               isActive={location.pathname === item.path}
               collapsed={collapsed}
@@ -178,7 +182,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavItem
               key={item.path}
               path={item.path}
-              label={item.label}
+              labelKey={item.labelKey}
               icon={item.icon}
               isActive={location.pathname === item.path}
               collapsed={collapsed}
@@ -209,7 +213,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="text-sm font-medium text-zinc-200 leading-tight truncate">
                 {USER_NAME}
               </p>
-              <p className="text-xs text-zinc-500 leading-none">Online</p>
+              <p className="text-xs text-zinc-500 leading-none">{t("sidebar.online")}</p>
             </div>
           )}
         </div>

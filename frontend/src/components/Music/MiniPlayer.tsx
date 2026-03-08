@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMusicStore } from "../../hooks/useMusic";
 import { PlaylistSelector } from "./PlaylistSelector";
 import { Play, Pause, Volume2, Music } from "lucide-react";
@@ -10,6 +11,7 @@ interface MiniPlayerProps {
 }
 
 export function MiniPlayer({ leftOffset = 0, dimmed = false }: MiniPlayerProps) {
+  const { t } = useTranslation();
   const isPlaying = useMusicStore((s) => s.isPlaying);
   const currentTrack = useMusicStore((s) => s.currentTrack);
   const volume = useMusicStore((s) => s.volume);
@@ -37,7 +39,7 @@ export function MiniPlayer({ leftOffset = 0, dimmed = false }: MiniPlayerProps) 
           <Music className={`w-3.5 h-3.5 ${isPlaying ? "text-ase-gold" : "text-ase-muted"}`} />
         </div>
         <span className={`text-sm truncate ${isPlaying ? "text-white" : "text-ase-muted"}`}>
-          {currentTrack?.name ?? "No track selected"}
+          {currentTrack?.name ?? t("music.no_track")}
         </span>
         {isPlaying && (
           <span className="flex-shrink-0 flex gap-[2px] items-end h-3">

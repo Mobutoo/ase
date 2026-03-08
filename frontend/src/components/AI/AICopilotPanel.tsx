@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, AlertCircle, X, Brain, ListChecks, BookOpen, Zap } from "lucide-react";
 import { useAIStore } from "../../hooks/useAI";
 import type { AISuggestionType } from "../../types/phase5";
@@ -43,18 +44,18 @@ function SuggestionSkeleton() {
 
 // --- Empty state ---
 
-function EmptySuggestions({ filter }: { filter: FilterTab }) {
-  const label = filter === "all" ? "suggestions" : SUGGESTION_TYPE_LABELS[filter as AISuggestionType]?.toLowerCase() ?? "suggestions";
+function EmptySuggestions({ filter: _filter }: { filter: FilterTab }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-12 border border-dashed border-[#2a2a3e] rounded-xl">
       <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/5 border border-[#f59e0b]/10 flex items-center justify-center mb-3">
         <Sparkles className="w-5 h-5 text-[#f59e0b]/40" />
       </div>
       <p className="text-sm text-[#8a8aae] text-center mb-1">
-        No {label} yet
+        {t("ai.no_items")}
       </p>
       <p className="text-xs text-[#5a5a7e] text-center leading-relaxed max-w-xs">
-        AI suggestions will appear here after the daily plan or reflection is generated.
+        {t("ai.empty_help")}
       </p>
     </div>
   );
@@ -63,6 +64,7 @@ function EmptySuggestions({ filter }: { filter: FilterTab }) {
 // --- Main panel ---
 
 export function AICopilotPanel() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
   const suggestions = useAIStore((s) => s.suggestions);
@@ -109,10 +111,10 @@ export function AICopilotPanel() {
                 <div className="w-8 h-8 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/20 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-[#f59e0b]" />
                 </div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">AI Copilot</h1>
+                <h1 className="text-2xl font-bold text-white tracking-tight">{t("ai.title")}</h1>
               </div>
               <p className="text-sm text-[#8a8aae] ml-11">
-                Your personal AI assistant — plans, insights, and reflections
+                {t("ai.subtitle")}
               </p>
             </div>
           </div>
@@ -142,7 +144,7 @@ export function AICopilotPanel() {
           {/* Daily Briefing */}
           <section className="animate-slide-up">
             <p className="text-xs font-medium uppercase tracking-wider text-[#8a8aae] mb-3">
-              Today's Schedule
+              {t("ai.schedule")}
             </p>
             <DailyBriefing />
           </section>
@@ -151,11 +153,11 @@ export function AICopilotPanel() {
           <section className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium uppercase tracking-wider text-[#8a8aae]">
-                AI Suggestions
+                {t("ai.suggestions")}
               </p>
               {suggestions.length > 0 && (
                 <span className="text-xs text-[#5a5a7e]">
-                  {suggestions.filter((s) => s.accepted === null).length} pending
+                  {suggestions.filter((s) => s.accepted === null).length} {t("ai.pending")}
                 </span>
               )}
             </div>
@@ -209,7 +211,7 @@ export function AICopilotPanel() {
           {/* Reflection prompt */}
           <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <p className="text-xs font-medium uppercase tracking-wider text-[#8a8aae] mb-3">
-              Daily Reflection
+              {t("ai.reflection")}
             </p>
             <ReflectionPrompt />
           </section>

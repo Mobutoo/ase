@@ -19,6 +19,7 @@ from .base import TaskSource
 from .local_adapter import LocalAdapter
 from .plane_adapter import PlaneAdapter
 from .github_adapter import GitHubAdapter
+from .superproductivity_adapter import SuperProductivityAdapter
 
 
 # Registry maps source_type string → adapter class
@@ -27,6 +28,7 @@ _REGISTRY: dict[str, Type[TaskSource]] = {
     "local": LocalAdapter,
     "plane": PlaneAdapter,
     "github": GitHubAdapter,
+    "superproductivity": SuperProductivityAdapter,
 }
 
 

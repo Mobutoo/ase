@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { EnergyContext } from "../../types";
 import { useEnergyStore } from "../../hooks/useEnergy";
 import { RefreshCw } from "lucide-react";
@@ -10,20 +11,22 @@ interface EnergyCheckProps {
   label?: string;
 }
 
-const ENERGY_EMOJIS: { level: number; emoji: string; label: string }[] = [
-  { level: 1, emoji: "😫", label: "Exhausted" },
-  { level: 2, emoji: "😟", label: "Low" },
-  { level: 3, emoji: "😐", label: "Neutral" },
-  { level: 4, emoji: "😊", label: "Good" },
-  { level: 5, emoji: "🔥", label: "On Fire" },
+const ENERGY_EMOJIS: { level: number; emoji: string; i18nKey: string }[] = [
+  { level: 1, emoji: "😫", i18nKey: "energy.exhausted" },
+  { level: 2, emoji: "😟", i18nKey: "energy.low" },
+  { level: 3, emoji: "😐", i18nKey: "energy.neutral" },
+  { level: 4, emoji: "😊", i18nKey: "energy.good" },
+  { level: 5, emoji: "🔥", i18nKey: "energy.on_fire" },
 ];
 
 export function EnergyCheck({
   context = "check_in",
   sessionId,
   onSubmit,
-  label = "How's your energy?",
+  label,
 }: EnergyCheckProps) {
+  const { t } = useTranslation();
+  const displayLabel = label ?? t("energy.how");
   const submitReading = useEnergyStore((s) => s.submitReading);
   const isSubmitting = useEnergyStore((s) => s.isSubmitting);
   const lastSubmittedLevel = useEnergyStore((s) => s.lastSubmittedLevel);
@@ -44,14 +47,14 @@ export function EnergyCheck({
         <span className="text-3xl">{emoji?.emoji}</span>
         <div>
           <p className="text-xs text-ase-muted">
-            Logged: <span className="text-white font-medium">{emoji?.label}</span>
+            {t("energy.logged")}: <span className="text-white font-medium">{emoji ? t(emoji.i18nKey) : ""}</span>
           </p>
           <button
             onClick={() => { setSelected(null); setSubmitted(false); }}
             className="flex items-center gap-1 text-xs text-ase-gold/60 hover:text-ase-gold transition-colors mt-0.5"
           >
             <RefreshCw className="w-3 h-3" />
-            Change
+            {t("energy.change")}
           </button>
         </div>
       </div>
@@ -60,16 +63,16 @@ export function EnergyCheck({
 
   return (
     <div className="flex flex-col gap-3">
-      {label && (
-        <p className="text-sm font-medium text-ase-muted text-center">{label}</p>
+      {displayLabel && (
+        <p className="text-sm font-medium text-ase-muted text-center">{displayLabel}</p>
       )}
       <div className="flex items-center justify-center gap-2">
-        {ENERGY_EMOJIS.map(({ level, emoji, label: emojiLabel }) => (
+        {ENERGY_EMOJIS.map(({ level, emoji, i18nKey }) => (
           <button
             key={level}
             onClick={() => handleSelect(level)}
             disabled={isSubmitting}
-            title={emojiLabel}
+            title={t(i18nKey)}
             className={`
               w-10 h-10 text-2xl rounded-xl flex items-center justify-center
               transition-all duration-200 select-none
@@ -86,8 +89,8 @@ export function EnergyCheck({
         ))}
       </div>
       <div className="flex justify-between px-1">
-        <span className="text-[10px] text-ase-subtle">Exhausted</span>
-        <span className="text-[10px] text-ase-subtle">On Fire</span>
+        <span className="text-[10px] text-ase-subtle">{t("energy.exhausted")}</span>
+        <span className="text-[10px] text-ase-subtle">{t("energy.on_fire")}</span>
       </div>
     </div>
   );

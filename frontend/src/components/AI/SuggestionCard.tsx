@@ -1,4 +1,5 @@
 import { Brain, ListChecks, BookOpen, Zap, Check, X, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { AISuggestion, AISuggestionType } from "../../types/phase5";
 import { SUGGESTION_TYPE_LABELS } from "../../types/phase5";
 import { useAIStore } from "../../hooks/useAI";
@@ -119,6 +120,7 @@ interface SuggestionCardProps {
 }
 
 export function SuggestionCard({ suggestion }: SuggestionCardProps) {
+  const { t } = useTranslation();
   const acceptSuggestion = useAIStore((s) => s.acceptSuggestion);
   const dismissSuggestion = useAIStore((s) => s.dismissSuggestion);
   const actioningIds = useAIStore((s) => s.actioningIds);
@@ -160,11 +162,11 @@ export function SuggestionCard({ suggestion }: SuggestionCardProps) {
           {isAccepted && (
             <span className="flex items-center gap-1.5 text-xs text-[#34d399] font-medium">
               <Check className="w-3.5 h-3.5" />
-              Accepted
+              {t("ai.accept")}
             </span>
           )}
           {isDismissed && (
-            <span className="text-xs text-[#5a5a7e]">Dismissed</span>
+            <span className="text-xs text-[#5a5a7e]">{t("ai.dismiss")}</span>
           )}
           <span className="text-xs text-[#5a5a7e]">
             {formatTimestamp(suggestion.created_at)}
@@ -190,7 +192,7 @@ export function SuggestionCard({ suggestion }: SuggestionCardProps) {
             ) : (
               <Check className="w-3 h-3" />
             )}
-            Accept
+            {t("ai.accept")}
           </button>
           <button
             onClick={() => dismissSuggestion(suggestion.id)}
@@ -202,7 +204,7 @@ export function SuggestionCard({ suggestion }: SuggestionCardProps) {
             ) : (
               <X className="w-3 h-3" />
             )}
-            Dismiss
+            {t("ai.dismiss")}
           </button>
         </div>
       )}

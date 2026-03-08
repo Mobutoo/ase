@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { TaskSource } from "../../types/phase2";
 import { useTasksStore } from "../../hooks/useTasks";
 import { TaskCard } from "./TaskCard";
@@ -7,14 +8,15 @@ import { Plus, AlertCircle, X, Inbox } from "lucide-react";
 
 type FilterTab = TaskSource | "all";
 
-const FILTER_TABS: { value: FilterTab; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "local", label: "Local" },
-  { value: "plane", label: "Plane" },
-  { value: "github", label: "GitHub" },
+const FILTER_TAB_KEYS: { value: FilterTab; i18nKey: string }[] = [
+  { value: "all", i18nKey: "source.all" },
+  { value: "local", i18nKey: "source.local" },
+  { value: "plane", i18nKey: "source.plane" },
+  { value: "github", i18nKey: "source.github" },
 ];
 
 export function TaskList() {
+  const { t } = useTranslation();
   const tasks = useTasksStore((s) => s.tasks);
   const isLoading = useTasksStore((s) => s.isLoading);
   const error = useTasksStore((s) => s.error);
@@ -34,23 +36,23 @@ export function TaskList() {
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Tasks</h2>
+        <h2 className="text-lg font-semibold text-white">{t("tasks.title")}</h2>
         <button onClick={() => setIsModalOpen(true)}
           className="group flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-ase-gold/10 text-ase-gold border border-ase-gold/20 hover:bg-ase-gold/20 hover:border-ase-gold/30 hover:shadow-glow transition-all duration-200 active:scale-[0.97]">
           <Plus className="w-4 h-4 transition-transform group-hover:rotate-90 duration-200" />
-          Add Task
+          {t("tasks.add")}
         </button>
       </div>
 
       <div className="flex gap-1 bg-ase-bg/50 rounded-xl p-1 border border-ase-border/50">
-        {FILTER_TABS.map((tab) => (
+        {FILTER_TAB_KEYS.map((tab) => (
           <button key={tab.value} onClick={() => setFilter(tab.value)}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeFilter === tab.value
                 ? "bg-ase-gold/15 text-ase-gold shadow-sm border border-ase-gold/20"
                 : "text-ase-muted hover:text-white border border-transparent"
             }`}>
-            {tab.label}
+            {t(tab.i18nKey)}
           </button>
         ))}
       </div>
@@ -70,7 +72,7 @@ export function TaskList() {
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-2 border-ase-gold/20 border-t-ase-gold rounded-full animate-spin" />
-              <p className="text-sm text-ase-muted">Loading tasks...</p>
+              <p className="text-sm text-ase-muted">{t("tasks.loading")}</p>
             </div>
           </div>
         ) : filteredTasks.length === 0 ? (
@@ -79,12 +81,12 @@ export function TaskList() {
               <Inbox className="w-7 h-7 text-ase-muted/50" />
             </div>
             <div className="text-center">
-              <p className="text-ase-muted text-sm font-medium">No tasks yet</p>
-              <p className="text-ase-subtle text-xs mt-1">Create your first task to get started</p>
+              <p className="text-ase-muted text-sm font-medium">{t("tasks.empty_title")}</p>
+              <p className="text-ase-subtle text-xs mt-1">{t("tasks.empty_help")}</p>
             </div>
             <button onClick={() => setIsModalOpen(true)}
               className="text-sm text-ase-gold font-medium hover:text-ase-accent transition-colors">
-              + Create Task
+              + {t("tasks.create")}
             </button>
           </div>
         ) : (
@@ -98,7 +100,7 @@ export function TaskList() {
               <>
                 <div className="flex items-center gap-3 py-3">
                   <div className="h-px flex-1 bg-ase-border/50" />
-                  <span className="text-xs text-ase-subtle font-medium px-2">Completed ({doneTasks.length})</span>
+                  <span className="text-xs text-ase-subtle font-medium px-2">{t("tasks.completed")} ({doneTasks.length})</span>
                   <div className="h-px flex-1 bg-ase-border/50" />
                 </div>
                 {doneTasks.map((task) => (<TaskCard key={task.id} task={task} />))}
@@ -110,9 +112,9 @@ export function TaskList() {
 
       {filteredTasks.length > 0 && (
         <div className="flex items-center justify-center gap-4 py-1">
-          <span className="text-xs text-ase-subtle"><span className="text-ase-muted font-medium">{pendingTasks.length}</span> pending</span>
+          <span className="text-xs text-ase-subtle"><span className="text-ase-muted font-medium">{pendingTasks.length}</span> {t("tasks.pending")}</span>
           <span className="w-1 h-1 rounded-full bg-ase-border" />
-          <span className="text-xs text-ase-subtle"><span className="text-ase-muted font-medium">{doneTasks.length}</span> completed</span>
+          <span className="text-xs text-ase-subtle"><span className="text-ase-muted font-medium">{doneTasks.length}</span> {t("tasks.completed")}</span>
         </div>
       )}
 

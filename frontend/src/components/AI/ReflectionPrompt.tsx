@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BookOpen, RefreshCw, Send } from "lucide-react";
 import { useAIStore } from "../../hooks/useAI";
 import type { AISuggestion, ReflectionPromptContent } from "../../types/phase5";
@@ -25,14 +26,15 @@ function getQuestions(content: ReflectionPromptContent): string[] {
 // --- Empty state ---
 
 function EmptyReflection({ onRequest, isLoading }: { onRequest: () => void; isLoading: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4 border border-dashed border-[#2a2a3e] rounded-xl">
       <div className="w-10 h-10 rounded-xl bg-[#34d399]/5 border border-[#34d399]/10 flex items-center justify-center mb-3">
         <BookOpen className="w-5 h-5 text-[#34d399]/40" />
       </div>
-      <p className="text-sm text-[#8a8aae] text-center mb-1">No reflection prompt yet</p>
+      <p className="text-sm text-[#8a8aae] text-center mb-1">{t("ai.no_plan")}</p>
       <p className="text-xs text-[#5a5a7e] text-center mb-4 leading-relaxed">
-        At the end of the day, get an AI-generated reflection prompt based on your sessions.
+        {t("ai.no_plan_help")}
       </p>
       <button
         onClick={onRequest}
@@ -40,7 +42,7 @@ function EmptyReflection({ onRequest, isLoading }: { onRequest: () => void; isLo
         className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 hover:bg-[#34d399]/20 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <RefreshCw className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
-        {isLoading ? "Requesting..." : "Get Reflection Prompt"}
+        {isLoading ? t("ai.requesting") : t("ai.reflection")}
       </button>
     </div>
   );
@@ -49,6 +51,7 @@ function EmptyReflection({ onRequest, isLoading }: { onRequest: () => void; isLo
 // --- Main component ---
 
 export function ReflectionPrompt() {
+  const { t } = useTranslation();
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -91,7 +94,7 @@ export function ReflectionPrompt() {
             <BookOpen className="w-4 h-4 text-[#34d399]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">End-of-Day Reflection</h3>
+            <h3 className="text-sm font-semibold text-white">{t("ai.reflection")}</h3>
             {theme && (
               <p className="text-xs text-[#8a8aae]">{theme}</p>
             )}
@@ -106,7 +109,7 @@ export function ReflectionPrompt() {
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-[#8a8aae] hover:bg-[#2a2a3e] hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3 h-3 ${isRequestingReflection ? "animate-spin" : ""}`} />
-            {isRequestingReflection ? "Requesting..." : "New Prompt"}
+            {isRequestingReflection ? t("ai.requesting") : t("ai.new_plan")}
           </button>
         )}
       </div>
@@ -120,15 +123,15 @@ export function ReflectionPrompt() {
           <div className="w-10 h-10 rounded-full bg-[#34d399]/10 border border-[#34d399]/20 flex items-center justify-center mb-3">
             <Send className="w-5 h-5 text-[#34d399]" />
           </div>
-          <p className="text-sm text-white font-medium mb-1">Reflection saved</p>
+          <p className="text-sm text-white font-medium mb-1">{t("settings.saved")}</p>
           <p className="text-xs text-[#8a8aae] text-center mb-4 leading-relaxed">
-            Great work taking time to reflect. See you tomorrow.
+            {t("ai.empty_help")}
           </p>
           <button
             onClick={handleNewPrompt}
             className="text-xs text-[#8a8aae] hover:text-white transition-colors duration-200"
           >
-            Start a new reflection
+            {t("ai.new_plan")}
           </button>
         </div>
       ) : (
@@ -151,7 +154,7 @@ export function ReflectionPrompt() {
           {/* Text area */}
           <div>
             <label className="block text-xs font-medium text-[#8a8aae] uppercase tracking-wider mb-2">
-              Your Notes
+              {t("ai.reflection")}
             </label>
             <textarea
               value={notes}
@@ -170,7 +173,7 @@ export function ReflectionPrompt() {
               className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 hover:bg-[#34d399]/20 transition-all duration-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-3 h-3" />
-              Save Reflection
+              {t("settings.save")}
             </button>
           </div>
         </div>

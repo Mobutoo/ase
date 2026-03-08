@@ -1,5 +1,5 @@
+import { useTranslation } from "react-i18next";
 import { useTimerStore } from "../../hooks/useTimer";
-import { MODE_LABELS } from "../../types";
 import { ProgressRing } from "./ProgressRing";
 import { ModeSelector } from "./ModeSelector";
 import { Controls } from "./Controls";
@@ -11,13 +11,6 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-const PHASE_LABELS = {
-  idle: "",
-  focus: "Focus",
-  short_break: "Short Break",
-  long_break: "Long Break",
-} as const;
-
 const PHASE_COLORS = {
   idle: "#f59e0b",
   focus: "#f59e0b",
@@ -26,6 +19,7 @@ const PHASE_COLORS = {
 } as const;
 
 export function FlowTimer() {
+  const { t } = useTranslation();
   const mode = useTimerStore((s) => s.mode);
   const phase = useTimerStore((s) => s.phase);
   const status = useTimerStore((s) => s.status);
@@ -51,13 +45,13 @@ export function FlowTimer() {
           }
         `}>
           <span className="text-sm font-semibold text-ase-text">
-            {MODE_LABELS[mode]}
+            {t(`mode.${mode}`)}
           </span>
           {phase !== "idle" && (
             <>
               <span className="w-1 h-1 rounded-full bg-ase-muted/40" />
               <span className="text-sm font-medium" style={{ color: ringColor }}>
-                {PHASE_LABELS[phase]}
+                {t(`phase.${phase}`)}
                 {mode === "pomodoro" && phase === "focus" && (
                   <span className="text-ase-muted ml-1.5 font-mono text-xs">
                     #{pomodoroCount + 1}
@@ -87,7 +81,7 @@ export function FlowTimer() {
             </span>
             {isFreeFlow && (
               <span className="text-xs text-ase-muted mt-1.5 uppercase tracking-widest">
-                elapsed
+                {t("timer.elapsed")}
               </span>
             )}
           </div>
@@ -106,7 +100,7 @@ export function FlowTimer() {
           {Array.from({ length: Math.min(pomodoroCount, 8) }).map((_, i) => (
             <div key={i} className="w-2 h-2 rounded-full bg-ase-gold/60" />
           ))}
-          <span className="text-xs text-ase-muted ml-1">{pomodoroCount} done</span>
+          <span className="text-xs text-ase-muted ml-1">{pomodoroCount} {t("timer.done")}</span>
         </div>
       )}
     </div>

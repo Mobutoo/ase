@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { LeaderboardEntry, LeaderboardPeriod } from "../../types/phase4";
 import { useLeaderboardStore } from "../../hooks/useLeaderboard";
 import { MemberProfile } from "./MemberProfile";
 
-const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
-  week: "This Week",
-  month: "This Month",
-  alltime: "All Time",
+const PERIOD_LABEL_KEYS: Record<LeaderboardPeriod, string> = {
+  week: "social.this_week",
+  month: "social.this_month",
+  alltime: "social.all_time",
 };
 
 const RANK_BORDERS: Record<number, string> = {
@@ -29,6 +30,7 @@ interface RowProps {
 }
 
 const LeaderboardRow: React.FC<RowProps> = ({ entry, onClick }) => {
+  const { t } = useTranslation();
   const isTop3 = entry.rank <= 3;
   const totalHours = (entry.totalMinutes / 60).toFixed(1);
   const initials = entry.displayName
@@ -78,31 +80,32 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, onClick }) => {
           </p>
           {entry.isCurrentUser && (
             <span className="text-[10px] bg-[#f59e0b]/20 text-[#f59e0b] px-1 py-0.5 rounded-full font-medium">
-              You
+              {t("social.you")}
             </span>
           )}
         </div>
         <p className="text-[11px] text-gray-500">
-          {entry.sessionCount} sessions · {entry.streak}d streak
+          {entry.sessionCount} {t("social.sessions")} · {entry.streak}d {t("social.streak")}
         </p>
       </div>
 
       {/* Hours */}
       <div className="text-right flex-shrink-0">
         <p className="text-sm font-bold text-gray-100">{totalHours}h</p>
-        <p className="text-[10px] text-gray-500">focus</p>
+        <p className="text-[10px] text-gray-500">{t("social.focus")}</p>
       </div>
 
       {/* Score */}
       <div className="text-right w-12 flex-shrink-0">
         <p className="text-sm font-bold text-[#f59e0b]">{entry.focusScore}</p>
-        <p className="text-[10px] text-gray-500">score</p>
+        <p className="text-[10px] text-gray-500">{t("social.score")}</p>
       </div>
     </button>
   );
 };
 
 export const Leaderboard: React.FC = () => {
+  const { t } = useTranslation();
   const { entries, period, isLoading, error, fetchLeaderboard, setPeriod } = useLeaderboardStore();
   const [selected, setSelected] = useState<LeaderboardEntry | null>(null);
 
@@ -119,7 +122,7 @@ export const Leaderboard: React.FC = () => {
     <div className="flex flex-col gap-4">
       {/* Period toggle */}
       <div className="flex gap-1 bg-[#1a1a2e] border border-[#2a2a3e] rounded-lg p-1 self-start">
-        {(Object.keys(PERIOD_LABELS) as LeaderboardPeriod[]).map((p) => (
+        {(Object.keys(PERIOD_LABEL_KEYS) as LeaderboardPeriod[]).map((p) => (
           <button
             key={p}
             onClick={() => handlePeriodChange(p)}
@@ -129,7 +132,7 @@ export const Leaderboard: React.FC = () => {
                 : "text-gray-400 hover:text-gray-200"
             }`}
           >
-            {PERIOD_LABELS[p]}
+            {t(PERIOD_LABEL_KEYS[p])}
           </button>
         ))}
       </div>
@@ -148,7 +151,7 @@ export const Leaderboard: React.FC = () => {
               <div key={i} className="h-16 bg-[#1a1a2e] border border-[#2a2a3e] rounded-xl animate-pulse" />
             ))
           ) : entries.length === 0 ? (
-            <div className="text-center text-gray-500 py-12 text-sm">No data yet</div>
+            <div className="text-center text-gray-500 py-12 text-sm">{t("social.no_data")}</div>
           ) : (
             entries.map((entry) => (
               <LeaderboardRow

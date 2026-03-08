@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Settings as SettingsIcon,
   Clock,
@@ -142,14 +143,14 @@ function Card({ icon: Icon, title, children }: CardProps) {
 // Theme picker
 // ---------------------------------------------------------------------------
 
-const THEMES: { value: string; label: string; color: string }[] = [
-  { value: "default", label: "Default", color: "#f59e0b" },
-  { value: "white", label: "White", color: "#e2e8f0" },
-  { value: "forest", label: "Forest", color: "#22c55e" },
-  { value: "aquamarine", label: "Aquamarine", color: "#06b6d4" },
-  { value: "garnet", label: "Garnet", color: "#be185d" },
-  { value: "coral", label: "Coral", color: "#f97316" },
-  { value: "afrofuturist", label: "Afrofuturist", color: "#a855f7" },
+const THEMES: { value: string; labelKey: string; color: string }[] = [
+  { value: "default", labelKey: "theme.default", color: "#f59e0b" },
+  { value: "white", labelKey: "theme.white", color: "#e2e8f0" },
+  { value: "forest", labelKey: "theme.forest", color: "#22c55e" },
+  { value: "aquamarine", labelKey: "theme.aquamarine", color: "#06b6d4" },
+  { value: "garnet", labelKey: "theme.garnet", color: "#be185d" },
+  { value: "coral", labelKey: "theme.coral", color: "#f97316" },
+  { value: "afrofuturist", labelKey: "theme.afrofuturist", color: "#a855f7" },
 ];
 
 interface ThemePickerProps {
@@ -158,16 +159,17 @@ interface ThemePickerProps {
 }
 
 function ThemePicker({ value, onChange }: ThemePickerProps) {
+  const { t } = useTranslation();
   return (
     <div className="py-3">
-      <p className="text-sm font-medium text-white mb-3">Theme</p>
+      <p className="text-sm font-medium text-white mb-3">{t("settings.theme")}</p>
       <div className="flex flex-wrap gap-3">
         {THEMES.map((theme) => (
           <button
             key={theme.value}
             type="button"
             onClick={() => onChange(theme.value)}
-            title={theme.label}
+            title={t(theme.labelKey)}
             className={[
               "group relative flex flex-col items-center gap-1.5 p-0 focus:outline-none",
             ].join(" ")}
@@ -203,7 +205,7 @@ function ThemePicker({ value, onChange }: ThemePickerProps) {
                 value === theme.value ? "text-white" : "text-ase-muted",
               ].join(" ")}
             >
-              {theme.label}
+              {t(theme.labelKey)}
             </span>
           </button>
         ))}
@@ -216,12 +218,12 @@ function ThemePicker({ value, onChange }: ThemePickerProps) {
 // Playlist URL input row
 // ---------------------------------------------------------------------------
 
-const FLOW_MODES: { key: string; label: string }[] = [
-  { key: "deep_work", label: "Deep Work" },
-  { key: "pomodoro", label: "Pomodoro" },
-  { key: "sprint", label: "Sprint" },
-  { key: "kids", label: "Kids" },
-  { key: "free_flow", label: "Free Flow" },
+const FLOW_MODES: { key: string; labelKey: string }[] = [
+  { key: "deep_work", labelKey: "mode.deep_work" },
+  { key: "pomodoro", labelKey: "mode.pomodoro" },
+  { key: "sprint", labelKey: "mode.sprint" },
+  { key: "kids", labelKey: "mode.kids" },
+  { key: "free_flow", labelKey: "mode.free_flow" },
 ];
 
 interface PlaylistRowProps {
@@ -261,9 +263,11 @@ function PlaylistRow({ label, url, onChange }: PlaylistRowProps) {
 interface SourceBadgeProps {
   label: string;
   enabled: boolean;
+  activeLabel: string;
+  notConfiguredLabel: string;
 }
 
-function SourceBadge({ label, enabled }: SourceBadgeProps) {
+function SourceBadge({ label, enabled, activeLabel, notConfiguredLabel }: SourceBadgeProps) {
   return (
     <div className="flex items-center justify-between py-3">
       <span className="text-sm text-white">{label}</span>
@@ -275,7 +279,7 @@ function SourceBadge({ label, enabled }: SourceBadgeProps) {
             : "text-ase-muted border-ase-border bg-transparent",
         ].join(" ")}
       >
-        {enabled ? "Active" : "Not configured"}
+        {enabled ? activeLabel : notConfiguredLabel}
       </span>
     </div>
   );
@@ -285,7 +289,18 @@ function SourceBadge({ label, enabled }: SourceBadgeProps) {
 // Main Settings page
 // ---------------------------------------------------------------------------
 
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "fr", label: "Fran\u00e7ais" },
+  { code: "es", label: "Espa\u00f1ol" },
+  { code: "it", label: "Italiano" },
+  { code: "pt", label: "Portugu\u00eas" },
+  { code: "el", label: "\u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac" },
+  { code: "de", label: "Deutsch" },
+];
+
 export function Settings() {
+  const { t, i18n } = useTranslation();
   const { settings, isLoading, isSaving, error, savedAt, fetchSettings, updateSettings, clearError } =
     useSettingsStore();
 
@@ -308,8 +323,8 @@ export function Settings() {
   useEffect(() => {
     if (savedAt) {
       setShowSaved(true);
-      const t = setTimeout(() => setShowSaved(false), 2500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setShowSaved(false), 2500);
+      return () => clearTimeout(timer);
     }
   }, [savedAt]);
 
@@ -367,10 +382,10 @@ export function Settings() {
           <div className="w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center">
             <SettingsIcon className="w-4 h-4 text-ase-gold" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t("settings.title")}</h1>
         </div>
         <p className="text-sm text-ase-muted ml-11">
-          Customize your flow experience
+          {t("settings.subtitle")}
         </p>
       </div>
 
@@ -384,7 +399,7 @@ export function Settings() {
             onClick={clearError}
             className="ml-auto text-red-400/60 hover:text-red-400 transition-colors"
           >
-            Dismiss
+            {t("ai.dismiss")}
           </button>
         </div>
       )}
@@ -392,55 +407,55 @@ export function Settings() {
       {effective && (
         <div className="space-y-6">
           {/* ── 1. Timer Durations ──────────────────────────────────────── */}
-          <Card icon={Clock} title="Timer Durations">
-            <SettingRow label="Deep Work" description="Single continuous focus block">
+          <Card icon={Clock} title={t("settings.timer_durations")}>
+            <SettingRow label={t("mode.deep_work")} description={t("settings.deep_work_desc")}>
               <NumberInput
                 value={effective.deep_work_duration}
                 onChange={(v) => patch("deep_work_duration", v)}
                 min={10}
                 max={240}
-                suffix="min"
+                suffix={t("generic.min")}
               />
             </SettingRow>
-            <SettingRow label="Pomodoro Focus" description="Core focus interval">
+            <SettingRow label={t("mode.pomodoro")} description={t("settings.pomodoro_desc")}>
               <NumberInput
                 value={effective.focusTime}
                 onChange={(v) => patch("focusTime", v)}
                 min={5}
                 max={90}
-                suffix="min"
+                suffix={t("generic.min")}
               />
             </SettingRow>
-            <SettingRow label="Short Break" description="Brief rest between pomodoros">
+            <SettingRow label={t("phase.short_break")} description={t("settings.short_break_desc")}>
               <NumberInput
                 value={effective.shortBreak}
                 onChange={(v) => patch("shortBreak", v)}
                 min={1}
                 max={30}
-                suffix="min"
+                suffix={t("generic.min")}
               />
             </SettingRow>
-            <SettingRow label="Long Break" description="Extended rest after 4 cycles">
+            <SettingRow label={t("phase.long_break")} description={t("settings.long_break_desc")}>
               <NumberInput
                 value={effective.longBreak}
                 onChange={(v) => patch("longBreak", v)}
                 min={5}
                 max={60}
-                suffix="min"
+                suffix={t("generic.min")}
               />
             </SettingRow>
-            <SettingRow label="Sprint Duration" description="Intense short burst mode">
+            <SettingRow label={t("mode.sprint")} description={t("settings.sprint_desc")}>
               <NumberInput
                 value={effective.sprint_duration}
                 onChange={(v) => patch("sprint_duration", v)}
                 min={10}
                 max={120}
-                suffix="min"
+                suffix={t("generic.min")}
               />
             </SettingRow>
             <SettingRow
-              label="Free Flow Mode"
-              description="Untimed open-ended sessions with no forced breaks"
+              label={t("mode.free_flow")}
+              description={t("settings.free_flow_desc")}
             >
               <Toggle
                 checked={effective.free_flow_enabled}
@@ -450,23 +465,34 @@ export function Settings() {
           </Card>
 
           {/* ── 2. Appearance ───────────────────────────────────────────── */}
-          <Card icon={Palette} title="Appearance">
+          <Card icon={Palette} title={t("settings.appearance")}>
             <ThemePicker
               value={effective.theme}
               onChange={(v) => patch("theme", v)}
             />
+            <SettingRow label={t("settings.language")} description={t("settings.language_desc")}>
+              <select
+                value={i18n.language.split("-")[0]}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
+            </SettingRow>
           </Card>
 
           {/* ── 3. Music Preferences ────────────────────────────────────── */}
-          <Card icon={Music} title="Music Preferences">
+          <Card icon={Music} title={t("settings.music_preferences")}>
             <p className="text-xs text-ase-muted pb-2">
-              Default YouTube playlist URL per focus mode. Leave blank to use the built-in default.
+              {t("settings.music_help")}
             </p>
-            {FLOW_MODES.map(({ key, label }) => (
+            {FLOW_MODES.map(({ key, labelKey }) => (
               <PlaylistRow
                 key={key}
                 mode={key}
-                label={label}
+                label={t(labelKey)}
                 url={effective.youtube_default_playlists?.[key] ?? ""}
                 onChange={(url) => patchPlaylist(key, url)}
               />
@@ -474,10 +500,10 @@ export function Settings() {
           </Card>
 
           {/* ── 4. Energy & Flow ────────────────────────────────────────── */}
-          <Card icon={Zap} title="Energy & Flow">
+          <Card icon={Zap} title={t("settings.energy_flow")}>
             <SettingRow
-              label="Energy Tracking"
-              description="Log energy level before and after each session"
+              label={t("settings.energy_tracking")}
+              description={t("settings.energy_tracking_desc")}
             >
               <Toggle
                 checked={effective.energy_tracking_enabled}
@@ -485,8 +511,8 @@ export function Settings() {
               />
             </SettingRow>
             <SettingRow
-              label="Auto Mode Selection"
-              description="Detect the best flow mode from task labels automatically"
+              label={t("settings.auto_mode")}
+              description={t("settings.auto_mode_desc")}
             >
               <Toggle
                 checked={effective.auto_mode_selection}
@@ -496,10 +522,10 @@ export function Settings() {
           </Card>
 
           {/* ── 5. Profile & Social ──────────────────────────────────────── */}
-          <Card icon={Users} title="Profile & Social">
+          <Card icon={Users} title={t("settings.profile_social")}>
             <SettingRow
-              label="Public Profile"
-              description="Appear on the community leaderboard"
+              label={t("settings.public_profile")}
+              description={t("settings.public_profile_desc")}
             >
               <Toggle
                 checked={effective.profile_public}
@@ -508,31 +534,32 @@ export function Settings() {
             </SettingRow>
             <div className="py-3 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white">Streak Freeze Days</p>
+                <p className="text-sm font-medium text-white">{t("settings.streak_freeze")}</p>
                 <p className="text-xs text-ase-muted mt-0.5">
-                  Automatic freeze days protect your streak when you miss a day
+                  {t("settings.streak_freeze_desc")}
                 </p>
               </div>
               <span className="text-sm font-semibold text-ase-gold tabular-nums">
                 {(settings as (UserSettings & { streak_freeze_days_remaining?: number }) | null)
                   ?.streak_freeze_days_remaining ?? 3}{" "}
-                remaining
+                {t("settings.remaining")}
               </span>
             </div>
           </Card>
 
           {/* ── 6. Task Sources ──────────────────────────────────────────── */}
-          <Card icon={Database} title="Task Sources">
-            <SourceBadge label="Local (Ase)" enabled={true} />
-            <SourceBadge label="Plane" enabled={false} />
-            <SourceBadge label="GitHub Issues" enabled={false} />
+          <Card icon={Database} title={t("settings.task_sources")}>
+            <SourceBadge label={t("source.local")} enabled={true} activeLabel={t("settings.active")} notConfiguredLabel={t("settings.not_configured")} />
+            <SourceBadge label={t("source.plane")} enabled={false} activeLabel={t("settings.active")} notConfiguredLabel={t("settings.not_configured")} />
+            <SourceBadge label={t("source.github")} enabled={false} activeLabel={t("settings.active")} notConfiguredLabel={t("settings.not_configured")} />
+            <SourceBadge label={t("source.superproductivity")} enabled={false} activeLabel={t("settings.active")} notConfiguredLabel={t("settings.not_configured")} />
             <div className="pt-3 pb-1">
               <p className="text-xs text-ase-muted">
-                Configure external task sources via the API. See the{" "}
+                {t("settings.configure_help")}.{" "}
                 <code className="text-ase-gold/80 text-[11px] font-mono bg-ase-gold/5 px-1 rounded">
                   /api/v1/task-sources/
                 </code>{" "}
-                endpoint.
+                {t("settings.endpoint")}.
               </p>
             </div>
           </Card>
@@ -542,11 +569,11 @@ export function Settings() {
             {showSaved ? (
               <span className="flex items-center gap-1.5 text-sm text-green-400">
                 <Check className="w-4 h-4" />
-                Settings saved
+                {t("settings.saved")}
               </span>
             ) : (
               <span className="text-xs text-ase-muted">
-                {hasDraft ? "You have unsaved changes" : "All changes saved"}
+                {hasDraft ? t("settings.unsaved") : t("settings.all_saved")}
               </span>
             )}
             <button
@@ -561,7 +588,7 @@ export function Settings() {
               ].join(" ")}
             >
               {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? "Saving…" : "Save Changes"}
+              {isSaving ? t("settings.saving") : t("settings.save")}
             </button>
           </div>
         </div>

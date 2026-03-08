@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { TaskList } from "../components/Tasks/TaskList";
 import { MusicPlayer } from "../components/Music/MusicPlayer";
 import { EnergyCheck } from "../components/Energy/EnergyCheck";
@@ -7,6 +8,7 @@ import { useEnergyStore } from "../hooks/useEnergy";
 import { Flame, Lightbulb } from "lucide-react";
 
 export function TasksPage() {
+  const { t } = useTranslation();
   const prediction = useEnergyStore((s) => s.prediction);
 
   return (
@@ -21,17 +23,17 @@ export function TasksPage() {
                     <Flame className="w-4 h-4 text-ase-gold" />
                   </div>
                   <h1 className="text-2xl font-bold text-white tracking-tight">
-                    Mission Board
+                    {t("tasks.title")}
                   </h1>
                 </div>
                 <p className="text-sm text-ase-muted ml-11">
-                  Your unified task list — Local, Plane, GitHub
+                  {t("tasks.subtitle")}
                 </p>
               </div>
 
               {/* Energy quick-check */}
               <div className="hidden md:block glass rounded-2xl px-5 py-3 animate-fade-in">
-                <EnergyCheck label="Energy now?" context="check_in" />
+                <EnergyCheck label={t("energy.how")} context="check_in" />
               </div>
             </div>
 
@@ -59,7 +61,7 @@ export function TasksPage() {
 
               {/* Energy check (mobile) */}
               <div className="md:hidden card p-4 animate-slide-up">
-                <EnergyCheck label="Energy now?" context="check_in" />
+                <EnergyCheck label={t("energy.how")} context="check_in" />
               </div>
 
               {/* Energy heatmap */}
@@ -80,12 +82,10 @@ export function TasksPage() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-ase-gold mb-1 uppercase tracking-wider">
-                          Pro Tip
+                          {t("tasks.pro_tip")}
                         </p>
                         <p className="text-xs text-ase-muted leading-relaxed">
-                          Click{" "}
-                          <span className="text-ase-gold font-medium">Start Working</span> on a
-                          task to link it with your next focus session.
+                          {t("tasks.pro_tip_text")}
                         </p>
                       </div>
                     </div>
