@@ -12,6 +12,7 @@ from math import ceil
 MODE_CHOICES = (
     ("deep_work", "Deep Work"),
     ("pomodoro", "Pomodoro"),
+    ("kids", "Kids"),
     ("sprint", "Sprint"),
     ("free_flow", "Free Flow"),
 )
@@ -20,6 +21,7 @@ MODE_CHOICES = (
 MODE_DEFAULTS = {
     "deep_work": {"work": 90, "break": 20},
     "pomodoro": {"work": 25, "short_break": 5, "long_break": 15},
+    "kids": {"work": 15, "short_break": 5, "long_break": 10, "long_break_interval": 3},
     "sprint": {"work": 45, "break": 10},
     "free_flow": {"work": 0, "break_ratio": 0.2},
 }

@@ -26,14 +26,14 @@ services:
   ase:
     build: .
     ports:
-      - "80:8000"
+      - "8000:8000"
     environment:
       DATABASE_URL: "postgres://ase:ase-preprod-2026@postgres:5432/ase"
       REDIS_URL: "redis://redis:6379/0"
       SECRET_KEY: "preprod-secret-key-not-for-production-use"
       DEBUG: "1"
       ALLOWED_HOSTS: "*"
-      CSRF_TRUSTED_ORIGINS: "http://128.140.40.106"
+      CSRF_TRUSTED_ORIGINS: "http://128.140.40.106,https://asepprd.ewutelo.cloud"
     depends_on:
       postgres:
         condition: service_healthy

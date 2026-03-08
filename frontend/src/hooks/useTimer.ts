@@ -48,9 +48,19 @@ function getDurationMs(mode: FlowMode): number {
   return MODE_DEFAULTS[mode].work * 60 * 1000;
 }
 
+function getLongBreakInterval(mode: FlowMode): number {
+  if (mode === "kids") return 3;
+  return 4;
+}
+
 function getBreakMs(mode: FlowMode, pomodoroCount: number): number {
   const defaults = MODE_DEFAULTS[mode];
-  if (mode === "pomodoro" && pomodoroCount > 0 && pomodoroCount % 4 === 0) {
+  const interval = getLongBreakInterval(mode);
+  if (
+    (mode === "pomodoro" || mode === "kids") &&
+    pomodoroCount > 0 &&
+    pomodoroCount % interval === 0
+  ) {
     return defaults.longBreak * 60 * 1000;
   }
   return defaults.shortBreak * 60 * 1000;
@@ -160,8 +170,11 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       return;
     }
 
+    const interval = getLongBreakInterval(mode);
     const isLongBreak =
-      mode === "pomodoro" && pomodoroCount > 0 && pomodoroCount % 4 === 0;
+      (mode === "pomodoro" || mode === "kids") &&
+      pomodoroCount > 0 &&
+      pomodoroCount % interval === 0;
     const breakMs = getBreakMs(mode, pomodoroCount);
     const breakPhase = isLongBreak ? "long_break" : "short_break";
 

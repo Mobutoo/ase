@@ -2,11 +2,12 @@ import type { FlowMode } from "../../types";
 import { MODE_LABELS } from "../../types";
 import { useTimerStore } from "../../hooks/useTimer";
 
-const MODES: FlowMode[] = ["deep_work", "pomodoro", "sprint", "free_flow"];
+const MODES: FlowMode[] = ["deep_work", "pomodoro", "kids", "sprint", "free_flow"];
 
 const MODE_ICONS: Record<FlowMode, string> = {
   deep_work: "\u2728", // sparkles
   pomodoro: "\u23f0", // alarm clock
+  kids: "\u{1f3ae}", // video game controller
   sprint: "\u26a1", // lightning
   free_flow: "\u{1f30a}", // wave
 };

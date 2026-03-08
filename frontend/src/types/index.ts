@@ -1,5 +1,5 @@
 // --- Flow Modes ---
-export type FlowMode = "deep_work" | "pomodoro" | "sprint" | "free_flow";
+export type FlowMode = "deep_work" | "pomodoro" | "kids" | "sprint" | "free_flow";
 
 export type TimerPhase = "focus" | "short_break" | "long_break" | "idle";
 
@@ -12,6 +12,7 @@ export const MODE_DEFAULTS: Record<
 > = {
   deep_work: { work: 90, shortBreak: 20, longBreak: 20 },
   pomodoro: { work: 25, shortBreak: 5, longBreak: 15 },
+  kids: { work: 15, shortBreak: 5, longBreak: 10 },
   sprint: { work: 45, shortBreak: 10, longBreak: 10 },
   free_flow: { work: 0, shortBreak: 0, longBreak: 0 },
 };
@@ -19,6 +20,7 @@ export const MODE_DEFAULTS: Record<
 export const MODE_LABELS: Record<FlowMode, string> = {
   deep_work: "Deep Work",
   pomodoro: "Pomodoro",
+  kids: "Kids",
   sprint: "Sprint",
   free_flow: "Free Flow",
 };
