@@ -1,16 +1,10 @@
-# https://stackoverflow.com/questions/2223429/django-global-template-variables
-import PomoTracker
+"""Global template context variables."""
+import ase_project
 
 
 def global_settings(request):
     return {
-        'SITE_NAME': 'PomoTracker',
-        'SITE_EMAIL': '@pomotracker.app',
-        'SITE_URL': 'https://pomotracker.app',
-        'SITE_DESCRIPTION': 'Pomodoro Tracker',
-        'SITE_KEYWORDS': 'pomodoro, tracker, productivity, time management',
-        'SITE_AUTHOR': 'PomoTracker',
-        'SITE_TWITTER': '@PomoTracker',
-        'SITE_GITHUB': 'https://github.com/viodid/PomoTracker',
-        'SITE_VERSION': PomoTracker.__version__
+        'SITE_NAME': 'Asé',
+        'SITE_DESCRIPTION': 'Human-centric flow engine',
+        'SITE_VERSION': ase_project.__version__,
     }

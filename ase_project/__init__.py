@@ -1,11 +1,6 @@
+"""Asé — Human-centric flow engine."""
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# https://stackoverflow.com/a/46237916/17260275
-file = open(BASE_DIR / "version.txt", "r", encoding="utf-8")
-version = file.read().split('-')
-
-__version__ = version[0] + '.' + version[1]
-
-print(__version__)
+_version_file = Path(__file__).resolve().parent.parent / "version.txt"
+_parts = _version_file.read_text(encoding="utf-8").strip().split("-")
+__version__ = _parts[0] + "." + _parts[1] if len(_parts) > 1 else _parts[0]
