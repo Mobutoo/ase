@@ -10,6 +10,8 @@ import {
   ChevronRight,
   Flame,
 } from "lucide-react";
+import { MiniPlayer } from "../Music/MiniPlayer";
+import { YouTubeEmbed } from "../Music/YouTubeEmbed";
 
 const NAV_ITEMS = [
   { path: "/", label: "Focus", icon: Timer },
@@ -117,9 +119,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-16">
         {children}
       </main>
+
+      {/* Global music player — persists across all pages */}
+      <YouTubeEmbed />
+      <MiniPlayer />
     </div>
   );
 }

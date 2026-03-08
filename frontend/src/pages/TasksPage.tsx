@@ -1,6 +1,5 @@
 import { TaskList } from "../components/Tasks/TaskList";
 import { MusicPlayer } from "../components/Music/MusicPlayer";
-import { MiniPlayer } from "../components/Music/MiniPlayer";
 import { EnergyCheck } from "../components/Energy/EnergyCheck";
 import { EnergyHeatmap } from "../components/Energy/EnergyHeatmap";
 import { EnergyPrediction } from "../components/Energy/EnergyPrediction";
@@ -11,7 +10,6 @@ export function TasksPage() {
   const prediction = useEnergyStore((s) => s.prediction);
 
   return (
-    <>
       <div className="min-h-screen bg-ase-bg pb-20">
         {/* Page header */}
         <div className="px-6 lg:px-10 pt-8 pb-6">
@@ -98,8 +96,5 @@ export function TasksPage() {
           </div>
         </div>
       </div>
-
-      <MiniPlayer />
-    </>
   );
 }

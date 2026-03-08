@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import type { FlowMode } from "../../types";
 import { useMusicStore } from "../../hooks/useMusic";
-import { YouTubeEmbed } from "./YouTubeEmbed";
 import { PlaylistSelector } from "./PlaylistSelector";
 import { Play, Pause, Volume2 } from "lucide-react";
 
@@ -32,8 +31,6 @@ export function MusicPlayer({ currentMode }: MusicPlayerProps) {
 
   return (
     <div className="card p-4 flex flex-col gap-4">
-      <YouTubeEmbed />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
