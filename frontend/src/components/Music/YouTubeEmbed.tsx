@@ -73,7 +73,8 @@ export function YouTubeEmbed() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
-  const readyRef = useRef(false);
+  const readyRef = useRef(false);       // API loaded + player created
+  const playerReadyRef = useRef(false);  // onReady fired — methods safe to call
 
   // Load API + create player
   useEffect(() => {
@@ -90,7 +91,10 @@ export function YouTubeEmbed() {
           showinfo: 0,
         },
         events: {
-          onReady: () => setPlayerReady(true),
+          onReady: () => {
+            playerReadyRef.current = true;
+            setPlayerReady(true);
+          },
           onStateChange: (e) => {
             if (e.data === window.YT.PlayerState.ENDED) pause();
           },
@@ -103,6 +107,7 @@ export function YouTubeEmbed() {
       playerRef.current?.destroy();
       playerRef.current = null;
       readyRef.current = false;
+      playerReadyRef.current = false;
       setPlayerReady(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,7 +116,7 @@ export function YouTubeEmbed() {
   // Load track when currentTrack changes
   useEffect(() => {
     const player = playerRef.current;
-    if (!player || !currentTrack?.youtubeUrl) return;
+    if (!player || !playerReadyRef.current || !currentTrack?.youtubeUrl) return;
 
     const listId = extractPlaylistId(currentTrack.youtubeUrl);
     const videoId = extractVideoId(currentTrack.youtubeUrl);
@@ -126,7 +131,7 @@ export function YouTubeEmbed() {
   // Play / pause
   useEffect(() => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!player || !playerReadyRef.current) return;
     if (isPlaying) {
       player.playVideo();
     } else {
@@ -136,6 +141,7 @@ export function YouTubeEmbed() {
 
   // Volume
   useEffect(() => {
+    if (!playerReadyRef.current) return;
     playerRef.current?.setVolume(volume);
   }, [volume]);
 
