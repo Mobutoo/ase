@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EnergyContext } from "../../types";
 import { useEnergyStore } from "../../hooks/useEnergy";
+import { RefreshCw } from "lucide-react";
 
 interface EnergyCheckProps {
   context?: EnergyContext;
@@ -26,7 +27,6 @@ export function EnergyCheck({
   const submitReading = useEnergyStore((s) => s.submitReading);
   const isSubmitting = useEnergyStore((s) => s.isSubmitting);
   const lastSubmittedLevel = useEnergyStore((s) => s.lastSubmittedLevel);
-
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -40,20 +40,20 @@ export function EnergyCheck({
   if (submitted && lastSubmittedLevel !== null) {
     const emoji = ENERGY_EMOJIS.find((e) => e.level === lastSubmittedLevel);
     return (
-      <div className="flex flex-col items-center gap-2 py-2">
-        <span className="text-4xl">{emoji?.emoji}</span>
-        <p className="text-xs text-[#8a8aae]">
-          Logged: {emoji?.label}
-        </p>
-        <button
-          onClick={() => {
-            setSelected(null);
-            setSubmitted(false);
-          }}
-          className="text-xs text-[#f59e0b]/70 hover:text-[#f59e0b] transition-colors underline underline-offset-2"
-        >
-          Change
-        </button>
+      <div className="flex items-center gap-3 py-1">
+        <span className="text-3xl">{emoji?.emoji}</span>
+        <div>
+          <p className="text-xs text-ase-muted">
+            Logged: <span className="text-white font-medium">{emoji?.label}</span>
+          </p>
+          <button
+            onClick={() => { setSelected(null); setSubmitted(false); }}
+            className="flex items-center gap-1 text-xs text-ase-gold/60 hover:text-ase-gold transition-colors mt-0.5"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Change
+          </button>
+        </div>
       </div>
     );
   }
@@ -61,9 +61,8 @@ export function EnergyCheck({
   return (
     <div className="flex flex-col gap-3">
       {label && (
-        <p className="text-sm font-medium text-[#c0c0d8] text-center">{label}</p>
+        <p className="text-sm font-medium text-ase-muted text-center">{label}</p>
       )}
-
       <div className="flex items-center justify-center gap-2">
         {ENERGY_EMOJIS.map(({ level, emoji, label: emojiLabel }) => (
           <button
@@ -72,25 +71,23 @@ export function EnergyCheck({
             disabled={isSubmitting}
             title={emojiLabel}
             className={`
-              w-10 h-10 text-2xl rounded-full flex items-center justify-center
-              transition-all duration-150 select-none
+              w-10 h-10 text-2xl rounded-xl flex items-center justify-center
+              transition-all duration-200 select-none
               disabled:cursor-not-allowed
-              ${
-                selected === level
-                  ? "ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-[#1a1a2e] scale-110"
-                  : "hover:scale-110 hover:ring-2 hover:ring-[#f59e0b]/50 hover:ring-offset-1 hover:ring-offset-[#1a1a2e]"
+              ${selected === level
+                ? "ring-2 ring-ase-gold ring-offset-2 ring-offset-ase-bg scale-110 bg-ase-gold/10"
+                : "hover:scale-110 hover:bg-white/5"
               }
-              ${isSubmitting && selected !== level ? "opacity-50" : ""}
+              ${isSubmitting && selected !== level ? "opacity-40" : ""}
             `}
           >
             {emoji}
           </button>
         ))}
       </div>
-
       <div className="flex justify-between px-1">
-        <span className="text-[10px] text-[#6a6a8e]">Exhausted</span>
-        <span className="text-[10px] text-[#6a6a8e]">On Fire</span>
+        <span className="text-[10px] text-ase-subtle">Exhausted</span>
+        <span className="text-[10px] text-ase-subtle">On Fire</span>
       </div>
     </div>
   );

@@ -33,68 +33,81 @@ export function FlowTimer() {
   const totalDurationMs = useTimerStore((s) => s.totalDurationMs);
   const pomodoroCount = useTimerStore((s) => s.pomodoroCount);
 
-  const progress =
-    totalDurationMs > 0 ? 1 - remainingMs / totalDurationMs : 0;
-
+  const progress = totalDurationMs > 0 ? 1 - remainingMs / totalDurationMs : 0;
   const ringColor = PHASE_COLORS[phase];
   const isFreeFlow = mode === "free_flow" && phase === "focus";
+  const isActive = status !== "idle";
 
   return (
     <div className="flex flex-col items-center gap-8">
-      {/* Mode info */}
+      {/* Mode badge */}
       <div className="text-center">
-        <h2 className="text-2xl font-semibold text-ase-text">
-          {MODE_LABELS[mode]}
-        </h2>
-        {phase !== "idle" && (
-          <p
-            className="text-sm font-medium mt-1"
-            style={{ color: ringColor }}
-          >
-            {PHASE_LABELS[phase]}
-            {mode === "pomodoro" && phase === "focus" && (
-              <span className="text-ase-muted ml-2">
-                #{pomodoroCount + 1}
+        <div className={`
+          inline-flex items-center gap-2 px-4 py-1.5 rounded-full
+          border transition-all duration-300
+          ${isActive
+            ? "bg-ase-gold/10 border-ase-gold/30 shadow-glow"
+            : "bg-ase-surface border-ase-border"
+          }
+        `}>
+          <span className="text-sm font-semibold text-ase-text">
+            {MODE_LABELS[mode]}
+          </span>
+          {phase !== "idle" && (
+            <>
+              <span className="w-1 h-1 rounded-full bg-ase-muted/40" />
+              <span className="text-sm font-medium" style={{ color: ringColor }}>
+                {PHASE_LABELS[phase]}
+                {mode === "pomodoro" && phase === "focus" && (
+                  <span className="text-ase-muted ml-1.5 font-mono text-xs">
+                    #{pomodoroCount + 1}
+                  </span>
+                )}
               </span>
-            )}
-          </p>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Timer ring */}
-      <ProgressRing
-        progress={isFreeFlow ? 0 : progress}
-        color={ringColor}
-        bgColor={`${ringColor}22`}
-      >
-        <div className="flex flex-col items-center">
-          <span
-            className="text-5xl font-mono font-medium"
-            style={{ color: ringColor }}
-          >
-            {isFreeFlow
-              ? formatTime(
-                  useTimerStore.getState().elapsedMs
-                )
-              : formatTime(remainingMs)}
-          </span>
-          {isFreeFlow && (
-            <span className="text-xs text-ase-muted mt-1">elapsed</span>
-          )}
-        </div>
-      </ProgressRing>
+      <div className={isActive ? "animate-scale-in" : ""}>
+        <ProgressRing
+          progress={isFreeFlow ? 0 : progress}
+          color={ringColor}
+          bgColor={`${ringColor}15`}
+        >
+          <div className="flex flex-col items-center">
+            <span
+              className="text-6xl font-mono font-semibold tracking-tight"
+              style={{ color: ringColor }}
+            >
+              {isFreeFlow
+                ? formatTime(useTimerStore.getState().elapsedMs)
+                : formatTime(remainingMs)}
+            </span>
+            {isFreeFlow && (
+              <span className="text-xs text-ase-muted mt-1.5 uppercase tracking-widest">
+                elapsed
+              </span>
+            )}
+          </div>
+        </ProgressRing>
+      </div>
 
-      {/* Mode selector (only when idle) */}
+      {/* Mode selector (idle only) */}
       {status === "idle" && <ModeSelector />}
 
       {/* Controls */}
       <Controls />
 
-      {/* Session counter for pomodoro mode */}
+      {/* Pomodoro session dots */}
       {mode === "pomodoro" && pomodoroCount > 0 && status === "idle" && (
-        <p className="text-ase-muted text-sm">
-          {pomodoroCount} session{pomodoroCount !== 1 ? "s" : ""} completed
-        </p>
+        <div className="flex items-center gap-2">
+          {Array.from({ length: Math.min(pomodoroCount, 8) }).map((_, i) => (
+            <div key={i} className="w-2 h-2 rounded-full bg-ase-gold/60" />
+          ))}
+          <span className="text-xs text-ase-muted ml-1">{pomodoroCount} done</span>
+        </div>
       )}
     </div>
   );

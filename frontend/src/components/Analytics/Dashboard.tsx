@@ -7,22 +7,14 @@ import { FocusScore } from "./FocusScore";
 import { analytics } from "../../api/phase4";
 import type { DailyStats, DensityEntry, StreakInfo, FocusScoreBreakdown } from "../../types/phase4";
 import type { FlowMode } from "../../types";
+import { Clock, Activity, Target, Flame, AlertCircle } from "lucide-react";
 
 type DateRange = "7d" | "30d" | "90d";
-
-const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  "7d": "7 days",
-  "30d": "30 days",
-  "90d": "90 days",
-};
-
-const EMPTY_BY_MODE: Record<FlowMode, number> = {
-  deep_work: 0, pomodoro: 0, kids: 0, sprint: 0, free_flow: 0,
-};
+const DATE_RANGE_LABELS: Record<DateRange, string> = { "7d": "7 days", "30d": "30 days", "90d": "90 days" };
+const EMPTY_BY_MODE: Record<FlowMode, number> = { deep_work: 0, pomodoro: 0, kids: 0, sprint: 0, free_flow: 0 };
 
 function subtractDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
+  const d = new Date(); d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -36,15 +28,13 @@ function mergeByMode(days: DailyStats[]): Record<FlowMode, number> {
   );
 }
 
-interface CardProps {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const Card: React.FC<CardProps> = ({ title, children, className = "" }) => (
-  <div className={`bg-[#1a1a2e] border border-[#2a2a3e] rounded-xl p-4 flex flex-col gap-3 ${className}`}>
-    <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">{title}</h3>
+interface CardProps { title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string; }
+const Card: React.FC<CardProps> = ({ title, icon, children, className = "" }) => (
+  <div className={`card p-5 flex flex-col gap-3 ${className}`}>
+    <div className="flex items-center gap-2">
+      {icon && <div className="w-6 h-6 rounded-md bg-ase-gold/10 flex items-center justify-center">{icon}</div>}
+      <h3 className="text-sm font-semibold text-ase-muted uppercase tracking-wider">{title}</h3>
+    </div>
     {children}
   </div>
 );
@@ -57,29 +47,20 @@ export const Dashboard: React.FC = () => {
   const [focusScore, setFocusScore] = useState<FocusScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const rangeDays: Record<DateRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const from = subtractDays(rangeDays[range]);
       const [dailyData, densityData, streakData, scoreData] = await Promise.all([
-        analytics.daily({ from }),
-        analytics.density({ weeks: "52" }),
-        analytics.streak(),
-        analytics.focusScore(),
+        analytics.daily({ from }), analytics.density({ weeks: "52" }),
+        analytics.streak(), analytics.focusScore(),
       ]);
-      setDaily(dailyData);
-      setDensity(densityData);
-      setStreak(streakData);
-      setFocusScore(scoreData);
+      setDaily(dailyData); setDensity(densityData); setStreak(streakData); setFocusScore(scoreData);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load analytics");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [range]);
 
   useEffect(() => { load(); }, [load]);
@@ -89,107 +70,64 @@ export const Dashboard: React.FC = () => {
   const totalHours = (totalMinutes / 60).toFixed(1);
   const totalSessions = daily.reduce((s, d) => s + d.sessionCount, 0);
 
-  return (
-    <div className="flex flex-col gap-6 p-4 lg:p-6 bg-[#0f0f0f] min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-100">Analytics</h1>
-          <p className="text-sm text-gray-500">Your focus performance over time</p>
-        </div>
+  const stats = [
+    { label: "Total Focus", value: `${totalHours}h`, sub: `${totalMinutes} min`, icon: <Clock className="w-3.5 h-3.5 text-ase-gold" /> },
+    { label: "Sessions", value: totalSessions, sub: `in ${daily.length} days`, icon: <Activity className="w-3.5 h-3.5 text-ase-gold" /> },
+    { label: "Avg / Day", value: `${daily.length > 0 ? (totalMinutes / daily.length).toFixed(0) : 0}m`, sub: "focus minutes", icon: <Target className="w-3.5 h-3.5 text-ase-gold" /> },
+    { label: "Focus Score", value: focusScore?.overall ?? "—", sub: "/ 100", icon: <Flame className="w-3.5 h-3.5 text-ase-gold" /> },
+  ];
 
-        <div className="flex gap-1 bg-[#1a1a2e] border border-[#2a2a3e] rounded-lg p-1">
+  return (
+    <div className="flex flex-col gap-6 p-6 lg:p-10 min-h-screen">
+      <div className="flex items-center justify-between flex-wrap gap-3 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Analytics</h1>
+          <p className="text-sm text-ase-muted mt-0.5">Your focus performance over time</p>
+        </div>
+        <div className="flex gap-1 bg-ase-surface rounded-xl p-1 border border-ase-border">
           {(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                range === r
-                  ? "bg-[#f59e0b] text-[#0f0f0f]"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {DATE_RANGE_LABELS[r]}
-            </button>
+            <button key={r} onClick={() => setRange(r)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                range === r ? "bg-ase-gold text-ase-bg shadow-sm" : "text-ase-muted hover:text-white"
+              }`}>{DATE_RANGE_LABELS[r]}</button>
           ))}
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-900/30 border border-red-700 text-red-300 text-sm rounded-lg px-4 py-3">
-          {error}
+        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/15 rounded-xl px-4 py-3 animate-scale-in">
+          <AlertCircle className="w-4 h-4 text-red-400" /><span className="text-sm text-red-400">{error}</span>
         </div>
       )}
 
-      {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Total Focus", value: `${totalHours}h`, sub: `${totalMinutes} min` },
-          { label: "Sessions", value: totalSessions, sub: `in ${daily.length} days` },
-          { label: "Avg/Day", value: `${daily.length > 0 ? (totalMinutes / daily.length).toFixed(0) : 0}m`, sub: "focus minutes" },
-          { label: "Focus Score", value: focusScore?.overall ?? "—", sub: "/ 100" },
-        ].map(({ label, value, sub }) => (
-          <div
-            key={label}
-            className="bg-[#1a1a2e] border border-[#2a2a3e] rounded-xl p-4"
-          >
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className="text-2xl font-bold text-[#f59e0b] mt-1">{value}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{sub}</p>
+        {stats.map(({ label, value, sub, icon }, i) => (
+          <div key={label} className="card p-4 animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-md bg-ase-gold/10 flex items-center justify-center">{icon}</div>
+              <p className="text-xs text-ase-subtle uppercase tracking-wide">{label}</p>
+            </div>
+            <p className="text-2xl font-bold text-ase-gold">{value}</p>
+            <p className="text-xs text-ase-subtle mt-0.5">{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Main charts grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Focus chart — spans 2 cols */}
-        <Card title="Focus Minutes / Day" className="lg:col-span-2">
-          {loading ? (
-            <div className="h-48 animate-pulse bg-[#2a2a3e] rounded" />
-          ) : (
-            <>
-              <FocusChart data={daily} />
-              <FocusChartLegend />
-            </>
-          )}
+        <Card title="Focus Minutes / Day" icon={<Activity className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-2">
+          {loading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <><FocusChart data={daily} /><FocusChartLegend /></>}
         </Card>
-
-        {/* Pie */}
-        <Card title="Mode Distribution">
-          {loading ? (
-            <div className="h-48 animate-pulse bg-[#2a2a3e] rounded" />
-          ) : (
-            <CategoryPie byMode={byMode} />
-          )}
+        <Card title="Mode Distribution" icon={<Target className="w-3.5 h-3.5 text-ase-gold" />}>
+          {loading ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <CategoryPie byMode={byMode} />}
         </Card>
-
-        {/* Density */}
-        <Card title="Activity Heatmap (52 weeks)" className="lg:col-span-2">
-          {loading ? (
-            <div className="h-32 animate-pulse bg-[#2a2a3e] rounded" />
-          ) : (
-            <DensityChart data={density} weeks={52} />
-          )}
+        <Card title="Activity Heatmap" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-2">
+          {loading ? <div className="h-32 animate-pulse bg-ase-surface rounded-xl" /> : <DensityChart data={density} weeks={52} />}
         </Card>
-
-        {/* Focus Score */}
-        <Card title="Focus Score">
-          {loading || !focusScore ? (
-            <div className="h-48 animate-pulse bg-[#2a2a3e] rounded" />
-          ) : (
-            <FocusScore score={focusScore} />
-          )}
+        <Card title="Focus Score" icon={<Target className="w-3.5 h-3.5 text-ase-gold" />}>
+          {loading || !focusScore ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <FocusScore score={focusScore} />}
         </Card>
-
-        {/* Streak Calendar */}
-        <Card title="Streak Calendar" className="lg:col-span-3">
-          {loading || !streak ? (
-            <div className="h-48 animate-pulse bg-[#2a2a3e] rounded" />
-          ) : (
-            <div className="max-w-sm">
-              <StreakCalendar streak={streak} />
-            </div>
-          )}
+        <Card title="Streak Calendar" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-3">
+          {loading || !streak ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <div className="max-w-sm"><StreakCalendar streak={streak} /></div>}
         </Card>
       </div>
     </div>

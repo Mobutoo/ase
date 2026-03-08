@@ -1,5 +1,149 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+/* ─── Global ─── */
+body {
+  background: #0a0a14;
+  color: #e2e8f0;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* ─── Animations ─── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(245, 158, 11, 0.15); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes equalizer {
+  0% { height: 30%; }
+  50% { height: 100%; }
+  100% { height: 30%; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes border-flow {
+  0% { border-color: rgba(245, 158, 11, 0.2); }
+  50% { border-color: rgba(245, 158, 11, 0.5); }
+  100% { border-color: rgba(245, 158, 11, 0.2); }
+}
+
+/* ─── Utility Classes ─── */
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+.animate-fade-in { animation: fade-in 0.4s ease-out; }
+.animate-slide-up { animation: slide-up 0.5s ease-out; }
+.animate-scale-in { animation: scale-in 0.3s ease-out; }
+.animate-border-flow { animation: border-flow 3s ease-in-out infinite; }
+
+/* ─── Glass Effect ─── */
+.glass {
+  background: rgba(20, 20, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.08);
+}
+
+.glass-strong {
+  background: rgba(20, 20, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+}
+
+/* ─── Card Styles ─── */
+.card {
+  background: linear-gradient(135deg, rgba(20, 20, 42, 0.9) 0%, rgba(15, 15, 30, 0.95) 100%);
+  border: 1px solid rgba(30, 30, 63, 0.8);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+.card:hover {
+  border-color: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(245, 158, 11, 0.05);
+}
+
+/* ─── Glow Effects ─── */
+.glow-gold {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.1), 0 0 45px rgba(245, 158, 11, 0.05);
+}
+
+.glow-gold-strong {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2), 0 0 60px rgba(245, 158, 11, 0.1);
+}
+
+/* ─── Input Focus ─── */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+}
+
+/* ─── Range Slider ─── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-track {
+  height: 4px;
+  background: rgba(30, 30, 63, 0.8);
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-top: -5px;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}

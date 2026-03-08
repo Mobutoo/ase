@@ -22,7 +22,18 @@ async function request<T>(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    // Log details for debugging but show user-friendly messages
+    console.error(`API Error ${res.status}:`, body);
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("Please log in to continue");
+    }
+    if (res.status === 404) {
+      throw new Error("Resource not found");
+    }
+    if (res.status >= 500) {
+      throw new Error("Server error — please try again later");
+    }
+    throw new Error(`Request failed (${res.status})`);
   }
 
   if (res.status === 204) return undefined as T;
