@@ -2,8 +2,8 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
-from django.conf.urls.static import static
 from django.http import HttpResponse
+from django.views.static import serve as static_serve
 import os
 
 
@@ -19,16 +19,23 @@ def serve_react(request):
         )
 
 
+def serve_asset(request, path):
+    """Serve Vite build assets from staticfiles/frontend/assets/."""
+    return static_serve(
+        request, path, document_root=os.path.join(settings.STATIC_ROOT, "frontend", "assets")
+    )
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("accounts/", include("allauth.urls")),
+    # Vite assets (JS, CSS, fonts)
+    re_path(r"^assets/(?P<path>.*)$", serve_asset),
+    # Django static files (admin CSS, legacy)
+    re_path(r"^static/(?P<path>.*)$", static_serve, {"document_root": settings.STATIC_ROOT}),
     # Legacy app views (profile, etc.)
     path("legacy/", include("app.urls")),
-    # React SPA — catch all remaining routes
-    re_path(r"^(?!admin|api|accounts|static|legacy).*$", serve_react),
+    # React SPA — catch all remaining routes (MUST be last)
+    re_path(r"^(?!admin|api|accounts|static|assets|legacy).*$", serve_react),
 ]
-
-# Serve static files in DEBUG mode (dev/preprod)
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
