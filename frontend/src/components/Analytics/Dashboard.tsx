@@ -21,8 +21,9 @@ function subtractDays(days: number): string {
 function mergeByMode(days: DailyStats[]): Record<FlowMode, number> {
   return days.reduce<Record<FlowMode, number>>(
     (acc, day) => {
-      const modes = Object.keys(day.byMode) as FlowMode[];
-      return modes.reduce((a, m) => ({ ...a, [m]: (a[m] ?? 0) + (day.byMode[m] ?? 0) }), acc);
+      const byMode = day.byMode ?? {};
+      const modes = Object.keys(byMode) as FlowMode[];
+      return modes.reduce((a, m) => ({ ...a, [m]: (a[m] ?? 0) + (byMode[m] ?? 0) }), acc);
     },
     { ...EMPTY_BY_MODE }
   );
@@ -57,7 +58,10 @@ export const Dashboard: React.FC = () => {
         analytics.daily({ from }), analytics.density({ weeks: "52" }),
         analytics.streak(), analytics.focusScore(),
       ]);
-      setDaily(dailyData); setDensity(densityData); setStreak(streakData); setFocusScore(scoreData);
+      setDaily(Array.isArray(dailyData) ? dailyData : []);
+      setDensity(Array.isArray(densityData) ? densityData : []);
+      setStreak(streakData ?? null);
+      setFocusScore(scoreData ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load analytics");
     } finally { setLoading(false); }

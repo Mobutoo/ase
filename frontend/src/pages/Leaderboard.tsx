@@ -24,11 +24,17 @@ export function Leaderboard() {
   useEffect(() => {
     if (tab === "achievements" && achievements.length === 0) {
       setLoadingAch(true);
-      analyticsApi.achievements().then(setAchievements).catch(() => {}).finally(() => setLoadingAch(false));
+      analyticsApi.achievements()
+        .then((data) => setAchievements(Array.isArray(data) ? data : []))
+        .catch(() => {})
+        .finally(() => setLoadingAch(false));
     }
     if (tab === "rewards" && rewards.length === 0) {
       setLoadingRew(true);
-      leaderboardApi.rewards().then(setRewards).catch(() => {}).finally(() => setLoadingRew(false));
+      leaderboardApi.rewards()
+        .then((data) => setRewards(Array.isArray(data) ? data : []))
+        .catch(() => {})
+        .finally(() => setLoadingRew(false));
     }
   }, [tab]);
 

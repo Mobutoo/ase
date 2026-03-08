@@ -20,11 +20,11 @@ export const StreakCalendar: React.FC<Props> = ({ streak, month }) => {
   }, [target]);
 
   const activeSet = useMemo(
-    () => new Set(streak.activeDates),
+    () => new Set(streak.activeDates ?? []),
     [streak.activeDates]
   );
   const frozenSet = useMemo(
-    () => new Set(streak.frozenDates),
+    () => new Set(streak.frozenDates ?? []),
     [streak.frozenDates]
   );
 

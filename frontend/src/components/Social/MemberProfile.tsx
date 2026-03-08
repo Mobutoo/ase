@@ -77,7 +77,7 @@ export const MemberProfile: React.FC<Props> = ({ entry, achievements = 0 }) => {
       {/* Mini pie */}
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          <CategoryPie byMode={entry.byMode as Record<FlowMode, number>} size={100} />
+          <CategoryPie byMode={(entry.byMode ?? {}) as Record<FlowMode, number>} size={100} />
         </div>
         <div className="flex flex-col gap-1 text-xs text-gray-500">
           {achievements > 0 && (
@@ -88,7 +88,7 @@ export const MemberProfile: React.FC<Props> = ({ entry, achievements = 0 }) => {
           <p className="leading-relaxed">
             Primarily focuses on{" "}
             <span className="text-gray-300">
-              {Object.entries(entry.byMode)
+              {Object.entries(entry.byMode ?? {})
                 .sort(([, a], [, b]) => b - a)[0]?.[0]
                 ?.replace("_", " ") ?? "—"}
             </span>

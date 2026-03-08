@@ -29,8 +29,9 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 
 
 export const CategoryPie: React.FC<Props> = ({ byMode, size = 180 }) => {
-  const modes = Object.keys(byMode) as FlowMode[];
-  const totalMinutes = modes.reduce((sum, m) => sum + (byMode[m] ?? 0), 0);
+  const safeByMode = byMode ?? ({} as Record<FlowMode, number>);
+  const modes = Object.keys(safeByMode) as FlowMode[];
+  const totalMinutes = modes.reduce((sum, m) => sum + (safeByMode[m] ?? 0), 0);
   const totalHours = (totalMinutes / 60).toFixed(1);
 
   if (totalMinutes === 0) {
@@ -48,9 +49,9 @@ export const CategoryPie: React.FC<Props> = ({ byMode, size = 180 }) => {
 
   let currentAngle = 0;
   const slices = modes
-    .filter((m) => (byMode[m] ?? 0) > 0)
+    .filter((m) => (safeByMode[m] ?? 0) > 0)
     .map((mode) => {
-      const mins = byMode[mode] ?? 0;
+      const mins = safeByMode[mode] ?? 0;
       const sweep = (mins / totalMinutes) * 360;
       const startAngle = currentAngle;
       currentAngle += sweep;

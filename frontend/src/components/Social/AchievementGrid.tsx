@@ -86,12 +86,13 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
 export const AchievementGrid: React.FC<Props> = ({ achievements }) => {
   const [filter, setFilter] = useState<AchievementCategory | "all">("all");
 
-  const unlockedCount = achievements.filter((a) => a.unlockedAt !== null).length;
+  const safeAchievements = achievements ?? [];
+  const unlockedCount = safeAchievements.filter((a) => a.unlockedAt !== null).length;
 
   const filtered =
     filter === "all"
-      ? achievements
-      : achievements.filter((a) => a.category === filter);
+      ? safeAchievements
+      : safeAchievements.filter((a) => a.category === filter);
 
   // Sort: unlocked first, then by category order
   const sorted = [...filtered].sort((a, b) => {
@@ -107,7 +108,7 @@ export const AchievementGrid: React.FC<Props> = ({ achievements }) => {
         <div>
           <h2 className="text-base font-bold text-gray-100">Achievements</h2>
           <p className="text-sm text-gray-500">
-            {unlockedCount} / {achievements.length} unlocked
+            {unlockedCount} / {safeAchievements.length} unlocked
           </p>
         </div>
 
@@ -116,11 +117,11 @@ export const AchievementGrid: React.FC<Props> = ({ achievements }) => {
           <div className="w-32 h-2 bg-[#2a2a3e] rounded-full overflow-hidden">
             <div
               className="h-full bg-[#f59e0b] rounded-full transition-all duration-500"
-              style={{ width: achievements.length > 0 ? `${(unlockedCount / achievements.length) * 100}%` : "0%" }}
+              style={{ width: safeAchievements.length > 0 ? `${(unlockedCount / safeAchievements.length) * 100}%` : "0%" }}
             />
           </div>
           <span className="text-xs text-gray-500">
-            {achievements.length > 0 ? Math.round((unlockedCount / achievements.length) * 100) : 0}%
+            {safeAchievements.length > 0 ? Math.round((unlockedCount / safeAchievements.length) * 100) : 0}%
           </span>
         </div>
       </div>

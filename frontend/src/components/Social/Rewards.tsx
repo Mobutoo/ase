@@ -13,8 +13,9 @@ interface Props {
 }
 
 export const Rewards: React.FC<Props> = ({ rewards, compact = false }) => {
+  const safeRewards = rewards ?? [];
   const counts: Record<MedalType, number> = { gold: 0, silver: 0, bronze: 0 };
-  rewards.forEach((r) => { counts[r.medal] += r.count; });
+  safeRewards.forEach((r) => { counts[r.medal] += r.count; });
 
   if (compact) {
     return (
@@ -60,11 +61,11 @@ export const Rewards: React.FC<Props> = ({ rewards, compact = false }) => {
       </div>
 
       {/* History list */}
-      {rewards.length > 0 && (
+      {safeRewards.length > 0 && (
         <div className="flex flex-col gap-2">
           <h4 className="text-xs text-gray-500 uppercase tracking-wider">History</h4>
           <div className="flex flex-col gap-1.5">
-            {[...rewards]
+            {[...safeRewards]
               .sort((a, b) => new Date(b.awardedAt).getTime() - new Date(a.awardedAt).getTime())
               .map((reward, idx) => {
                 const cfg = MEDAL_CONFIG[reward.medal];

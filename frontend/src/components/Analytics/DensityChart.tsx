@@ -26,9 +26,10 @@ interface Props {
 }
 
 export const DensityChart: React.FC<Props> = ({ data, weeks = 52 }) => {
+  const safeData = data ?? [];
   const grid = useMemo(() => {
     const byDate = new Map<string, DensityEntry>();
-    data.forEach((e) => byDate.set(e.date, e));
+    safeData.forEach((e) => byDate.set(e.date, e));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -56,7 +57,7 @@ export const DensityChart: React.FC<Props> = ({ data, weeks = 52 }) => {
     }
 
     return cols;
-  }, [data, weeks]);
+  }, [safeData, weeks]);
 
   const monthLabels = useMemo(() => {
     const labels: Array<{ month: string; colIndex: number }> = [];

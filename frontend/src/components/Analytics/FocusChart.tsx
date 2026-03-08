@@ -78,8 +78,9 @@ export const FocusChart: React.FC<Props> = ({ data, height = 200 }) => {
         const x = cx - barW / 2;
         let stackY = padTop + chartH;
 
+        const dayByMode = day.byMode ?? {};
         const segments = MODE_ORDER.map((mode) => {
-          const mins = day.byMode[mode] ?? 0;
+          const mins = dayByMode[mode] ?? 0;
           const barH = (mins / maxMinutes) * chartH;
           const segY = stackY - barH;
           stackY = segY;

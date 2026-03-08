@@ -114,7 +114,7 @@ export const Leaderboard: React.FC = () => {
     setError(null);
     try {
       const data = await leaderboardApi.list(period);
-      setEntries(data);
+      setEntries(Array.isArray(data) ? data : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load leaderboard");
     } finally {
