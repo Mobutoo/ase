@@ -1,0 +1,18 @@
+asepprd.ewutelo.cloud {
+	reverse_proxy ase:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+}
+
+# Fallback — direct IP access (HTTP only)
+:80 {
+	@not_acme not path /.well-known/acme-challenge/*
+	handle @not_acme {
+		reverse_proxy ase:8000
+	}
+}
