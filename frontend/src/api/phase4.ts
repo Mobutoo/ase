@@ -11,9 +11,16 @@ import type {
   Achievement,
   LeaderboardEntry,
   LeaderboardPeriod,
-  Reward,
-  FocusScoreBreakdown,
 } from "../types/phase4";
+
+/**
+ * Shape returned by GET /api/v1/leaderboard/rewards/
+ * Backend returns { total_achievements, recent } — NOT an array of Reward.
+ */
+export interface RewardsResponse {
+  total_achievements: number;
+  recent: Achievement[];
+}
 
 function getCsrfToken(): string {
   const match = document.cookie.match(/csrftoken=([^;]+)/);
@@ -92,26 +99,28 @@ export const analytics = {
     return request<StreakInfo>(`/api/v1/analytics/streak/${qs}`);
   },
 
-  focusScore: (username?: string) => {
-    const qs = username ? `?username=${encodeURIComponent(username)}` : "";
-    return request<FocusScoreBreakdown>(`/api/v1/analytics/focus-score/${qs}`);
-  },
-
   achievements: (username?: string) => {
     const qs = username ? `?username=${encodeURIComponent(username)}` : "";
     return request<Achievement[]>(`/api/v1/analytics/achievements/${qs}`);
   },
 };
 
+// Backend period values → frontend LeaderboardPeriod mapping
+const PERIOD_MAP: Record<LeaderboardPeriod, string> = {
+  week: "weekly",
+  month: "monthly",
+  alltime: "all_time",
+};
+
 // --- Leaderboard ---
 export const leaderboard = {
   list: (period: LeaderboardPeriod = "week", limit = 20) =>
     request<LeaderboardEntry[]>(
-      `/api/v1/leaderboard/?period=${period}&limit=${limit}`
+      `/api/v1/leaderboard/?period=${PERIOD_MAP[period]}&limit=${limit}`
     ),
 
   rewards: (username?: string) => {
     const qs = username ? `?username=${encodeURIComponent(username)}` : "";
-    return request<Reward[]>(`/api/v1/leaderboard/rewards/${qs}`);
+    return request<RewardsResponse>(`/api/v1/leaderboard/rewards/${qs}`);
   },
 };

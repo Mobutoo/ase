@@ -3,7 +3,6 @@ import { FocusChart, FocusChartLegend } from "./FocusChart";
 import { CategoryPie } from "./CategoryPie";
 import { DensityChart } from "./DensityChart";
 import { StreakCalendar } from "./StreakCalendar";
-import { FocusScore } from "./FocusScore";
 import { useAnalyticsStore } from "../../hooks/useAnalytics";
 import type { DailyStats } from "../../types/phase4";
 import type { FlowMode } from "../../types";
@@ -45,7 +44,7 @@ const RANGE_DAYS: Record<DateRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
 export const Dashboard: React.FC = () => {
   const [range, setRange] = useState<DateRange>("30d");
 
-  const { daily, density, streak, focusScore, isLoading, error, fetchAll } = useAnalyticsStore();
+  const { daily, density, streak, isLoading, error, fetchAll } = useAnalyticsStore();
 
   useEffect(() => {
     fetchAll(subtractDays(RANGE_DAYS[range]));
@@ -60,7 +59,7 @@ export const Dashboard: React.FC = () => {
     { label: "Total Focus", value: `${totalHours}h`, sub: `${totalMinutes} min`, icon: <Clock className="w-3.5 h-3.5 text-ase-gold" /> },
     { label: "Sessions", value: totalSessions, sub: `in ${daily.length} days`, icon: <Activity className="w-3.5 h-3.5 text-ase-gold" /> },
     { label: "Avg / Day", value: `${daily.length > 0 ? (totalMinutes / daily.length).toFixed(0) : 0}m`, sub: "focus minutes", icon: <Target className="w-3.5 h-3.5 text-ase-gold" /> },
-    { label: "Focus Score", value: focusScore?.overall ?? "—", sub: "/ 100", icon: <Flame className="w-3.5 h-3.5 text-ase-gold" /> },
+    { label: "Streak", value: streak?.currentStreak ?? 0, sub: `best: ${streak?.longestStreak ?? 0}`, icon: <Flame className="w-3.5 h-3.5 text-ase-gold" /> },
   ];
 
   return (
@@ -109,8 +108,14 @@ export const Dashboard: React.FC = () => {
         <Card title="Activity Heatmap" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-2">
           {isLoading ? <div className="h-32 animate-pulse bg-ase-surface rounded-xl" /> : <DensityChart data={density} weeks={52} />}
         </Card>
-        <Card title="Focus Score" icon={<Target className="w-3.5 h-3.5 text-ase-gold" />}>
-          {isLoading || !focusScore ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <FocusScore score={focusScore} />}
+        <Card title="Streak" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />}>
+          {isLoading || !streak ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : (
+            <div className="flex flex-col items-center gap-2 py-4">
+              <p className="text-4xl font-bold text-ase-gold">{streak.currentStreak}</p>
+              <p className="text-sm text-ase-muted">day streak</p>
+              <p className="text-xs text-ase-subtle">Best: {streak.longestStreak} days</p>
+            </div>
+          )}
         </Card>
         <Card title="Streak Calendar" icon={<Flame className="w-3.5 h-3.5 text-ase-gold" />} className="lg:col-span-3">
           {isLoading || !streak ? <div className="h-48 animate-pulse bg-ase-surface rounded-xl" /> : <div className="max-w-sm"><StreakCalendar streak={streak} /></div>}

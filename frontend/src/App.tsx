@@ -5,6 +5,7 @@ import { Tasks } from "./pages/Tasks";
 import { Analytics } from "./pages/Analytics";
 import { Leaderboard } from "./pages/Leaderboard";
 import { Settings } from "./pages/Settings";
+import { AICopilotPanel } from "./components/AI/AICopilotPanel";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/ai" element={<AICopilotPanel />} />
       </Routes>
     </AppShell>
   );

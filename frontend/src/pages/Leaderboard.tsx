@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Leaderboard as LeaderboardComponent } from "../components/Social/Leaderboard";
 import { AchievementGrid } from "../components/Social/AchievementGrid";
-import { Rewards } from "../components/Social/Rewards";
 import { useLeaderboardStore } from "../hooks/useLeaderboard";
-import { Trophy, Award, Medal } from "lucide-react";
+import type { Achievement } from "../types/phase4";
+import { Trophy, Award, Medal, Star } from "lucide-react";
 
 type Tab = "leaderboard" | "achievements" | "rewards";
 
@@ -28,10 +28,10 @@ export function Leaderboard() {
     if (tab === "achievements" && achievements.length === 0) {
       fetchAchievements();
     }
-    if (tab === "rewards" && rewards.length === 0) {
+    if (tab === "rewards" && rewards.total_achievements === 0 && rewards.recent.length === 0) {
       fetchRewards();
     }
-  }, [tab, achievements.length, rewards.length, fetchAchievements, fetchRewards]);
+  }, [tab, achievements.length, rewards.total_achievements, rewards.recent.length, fetchAchievements, fetchRewards]);
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-10 min-h-screen">
@@ -84,10 +84,68 @@ export function Leaderboard() {
           isLoading ? (
             <div className="h-48 card animate-pulse" />
           ) : (
-            <Rewards rewards={rewards} />
+            <RewardsPanel
+              totalAchievements={rewards.total_achievements}
+              recent={rewards.recent}
+            />
           )
         )}
       </div>
+    </div>
+  );
+}
+
+/** Rewards panel — shows total achievements + recent unlocks */
+function RewardsPanel({ totalAchievements, recent }: { totalAchievements: number; recent: Achievement[] }) {
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Total count */}
+      <div className="card p-6 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center">
+          <Star className="w-6 h-6 text-ase-gold" />
+        </div>
+        <div>
+          <p className="text-3xl font-bold text-white font-mono">{totalAchievements}</p>
+          <p className="text-sm text-ase-muted">Total achievements unlocked</p>
+        </div>
+      </div>
+
+      {/* Recent unlocks */}
+      {recent.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <h4 className="text-xs text-ase-subtle uppercase tracking-wider font-medium">
+            Recent Unlocks
+          </h4>
+          <div className="flex flex-col gap-1.5">
+            {recent.map((r, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-3 card px-4 py-3"
+              >
+                <div className="w-8 h-8 rounded-lg bg-ase-gold/10 flex items-center justify-center">
+                  <Award className="w-4 h-4 text-ase-gold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white capitalize">
+                    {r.title}
+                  </p>
+                  <p className="text-xs text-ase-subtle">
+                    {r.unlockedAt ? new Date(r.unlockedAt).toLocaleDateString() : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-center border border-dashed border-ase-border rounded-xl p-12">
+          <Medal className="w-12 h-12 text-ase-subtle mb-3" strokeWidth={1.5} />
+          <p className="text-lg font-medium text-zinc-300">No medals yet</p>
+          <p className="text-sm text-ase-subtle max-w-sm mt-1">
+            Complete focus sessions and streaks to earn achievements and medals.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
