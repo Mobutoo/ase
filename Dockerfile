@@ -15,7 +15,7 @@ RUN npm run build
 # BUILDER #
 ###########
 
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /usr/src/app
 
@@ -23,7 +23,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc && \
+    apt-get install -y --no-install-recommends gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -34,7 +34,12 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requir
 # FINAL #
 #########
 
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
+
+# Runtime deps for psycopg2
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libpq5 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create app user
 RUN groupadd -r app && useradd -r -g app app
@@ -61,6 +66,10 @@ COPY --from=frontend /app/staticfiles/frontend $APP_HOME/staticfiles/frontend
 # Collect static files (Django legacy + React)
 RUN cp -r ${APP_HOME}/app/static/* ${APP_HOME}/staticfiles/ 2>/dev/null || true
 
+# Make entrypoint executable
+COPY entrypoint.sh $APP_HOME/entrypoint.sh
+RUN chmod +x $APP_HOME/entrypoint.sh
+
 # Set ownership
 RUN chown -R app:app $APP_HOME
 
@@ -68,4 +77,4 @@ USER app
 
 EXPOSE 8000
 
-CMD ["gunicorn", "ase_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "300"]
+ENTRYPOINT ["./entrypoint.sh"]

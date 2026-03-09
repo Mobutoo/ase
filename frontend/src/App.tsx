@@ -6,12 +6,16 @@ import { Analytics } from "./pages/Analytics";
 import { Leaderboard } from "./pages/Leaderboard";
 import { Settings } from "./pages/Settings";
 import { AICopilotPanel } from "./components/AI/AICopilotPanel";
+import { CalendarPage } from "./pages/CalendarPage";
+import { CirclePage } from "./pages/CirclePage";
 
 function App() {
   return (
     <AppShell>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/circle" element={<CirclePage />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/leaderboard" element={<Leaderboard />} />

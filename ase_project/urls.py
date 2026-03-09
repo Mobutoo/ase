@@ -6,6 +6,8 @@ from django.http import HttpResponse
 from django.views.static import serve as static_serve
 import os
 
+from calendars.urls import caldav_urlpatterns
+
 
 def serve_react(request):
     """Serve the React SPA index.html."""
@@ -34,8 +36,15 @@ urlpatterns = [
     re_path(r"^assets/(?P<path>.*)$", serve_asset),
     # Django static files (admin CSS, legacy)
     re_path(r"^static/(?P<path>.*)$", static_serve, {"document_root": settings.STATIC_ROOT}),
+    # Ase v3 new apps
+    path("api/", include("circles.urls")),
+    path("api/calendar/", include("calendars.urls")),
+    path("api/circles/<int:circle_pk>/agents/", include("agents.urls")),
+    path("oidc/", include("mozilla_django_oidc.urls")),
+    path("iam/", include("iam.urls", namespace="iam")),
+    path("caldav/", include((caldav_urlpatterns, "caldav"))),
     # Legacy app views (profile, etc.)
     path("legacy/", include("app.urls")),
     # React SPA — catch all remaining routes (MUST be last)
-    re_path(r"^(?!admin|api|accounts|static|assets|legacy).*$", serve_react),
+    re_path(r"^(?!admin|api|accounts|static|assets|legacy|oidc|iam|caldav).*$", serve_react),
 ]

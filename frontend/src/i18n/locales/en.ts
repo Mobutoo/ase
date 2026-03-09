@@ -3,6 +3,8 @@ const translations = {
   "nav.focus": "Focus",
   "nav.tasks": "Tasks",
   "nav.analytics": "Analytics",
+  "nav.calendar": "Calendar",
+  "nav.circle": "Circle",
   "nav.board": "Board",
   "nav.ai": "AI Copilot",
   "nav.settings": "Settings",

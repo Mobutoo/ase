@@ -1,4 +1,12 @@
 asepprd.ewutelo.cloud {
+	# WebSocket — Django Channels
+	@websocket {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	reverse_proxy @websocket ase:8000
+
+	# All other requests
 	reverse_proxy ase:8000
 
 	header {

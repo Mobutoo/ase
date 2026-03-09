@@ -30,6 +30,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 
 # --- Apps ---
 INSTALLED_APPS = [
+    "daphne",  # Must be before django.contrib.staticfiles
     "app",
     "api",
     "django.contrib.admin",
@@ -42,6 +43,14 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "rest_framework",
+    # Ase v3 new apps
+    "circles",
+    "calendars",
+    "iam",
+    "agents",
+    # Third-party
+    "mozilla_django_oidc",
+    "channels",
 ]
 
 # --- DRF ---
@@ -105,10 +114,11 @@ TEMPLATES = [
     },
 ]
 
-AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
+AUTHENTICATION_BACKENDS = [
+    "iam.backends.AseOIDCAuthenticationBackend",
+    "django.contrib.auth.backends.ModelBackend",  # fallback
     "allauth.account.auth_backends.AuthenticationBackend",
-)
+]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
@@ -170,3 +180,64 @@ N8N_WEBHOOK_DAILY_PLAN = os.environ.get("N8N_WEBHOOK_DAILY_PLAN", "")
 N8N_WEBHOOK_REFLECTION = os.environ.get("N8N_WEBHOOK_REFLECTION", "")
 # Inbound: n8n → Ase (shared secret validated in X-Webhook-Secret header)
 N8N_WEBHOOK_SECRET = os.environ.get("N8N_WEBHOOK_SECRET", "")
+
+# --- OIDC Authentication ---
+OIDC_RP_CLIENT_ID = os.environ.get('OIDC_CLIENT_ID', '')
+OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_CLIENT_SECRET', '')
+OIDC_OP_AUTHORIZATION_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/authorize'
+OIDC_OP_TOKEN_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/oauth/token'
+OIDC_OP_USER_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/oidc/v1/userinfo'
+OIDC_OP_JWKS_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/.well-known/jwks.json'
+OIDC_RP_SIGN_ALGO = 'RS256'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# --- IAM Backend ---
+IAM_BACKEND = os.environ.get('IAM_BACKEND', 'lldap')
+IAM_API_URL = os.environ.get('IAM_API_URL', 'http://lldap:17170')
+IAM_API_KEY = os.environ.get('IAM_API_KEY', '')
+
+# --- Federation ---
+FEDERATION_ENABLED = os.environ.get('FEDERATION_ENABLED', 'false').lower() == 'true'
+FEDERATION_GLOBAL_ISSUER = os.environ.get('FEDERATION_GLOBAL_ISSUER', '')
+FEDERATION_GLOBAL_CLIENT_ID = os.environ.get('FEDERATION_GLOBAL_CLIENT_ID', '')
+FEDERATION_GLOBAL_CLIENT_SECRET = os.environ.get('FEDERATION_GLOBAL_CLIENT_SECRET', '')
+
+# --- Agent IA ---
+AGENT_ENABLED = os.environ.get('AGENT_ENABLED', 'true').lower() == 'true'
+AGENT_RATE_LIMIT = int(os.environ.get('AGENT_RATE_LIMIT', '20'))
+AGENT_BOOKING_BUDGET_LIMIT = float(os.environ.get('AGENT_BOOKING_BUDGET_LIMIT', '50.00'))
+AGENT_TIMEOUT_MINUTES = int(os.environ.get('AGENT_TIMEOUT_MINUTES', '30'))
+
+# --- CalDAV ---
+CALDAV_EXTERNAL_URL = os.environ.get('CALDAV_EXTERNAL_URL', '')
+
+# --- Email (Brevo) ---
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+EMAIL_FROM = os.environ.get('EMAIL_FROM', 'noreply@flash.studio')
+
+# --- Push notifications (VAPID) ---
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+
+# --- Telegram ---
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_FAMILY_CHAT_ID = os.environ.get('TELEGRAM_FAMILY_CHAT_ID', '')
+
+# --- Google Maps ---
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+# --- Django Channels ---
+ASGI_APPLICATION = 'ase_project.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
+        },
+    },
+}
+
+# --- Celery ---
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/1')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')

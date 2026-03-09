@@ -12,6 +12,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -20,18 +21,34 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   ase:
     build: .
     expose:
       - "8000"
-    environment:
+    environment: &ase-env
       DATABASE_URL: "postgres://ase:ase-preprod-2026@postgres:5432/ase"
       REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/1"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
       SECRET_KEY: "preprod-secret-key-not-for-production-use"
       DEBUG: "1"
       ALLOWED_HOSTS: "*"
       CSRF_TRUSTED_ORIGINS: "http://128.140.40.106,https://asepprd.ewutelo.cloud"
+      # IAM — use allauth for preprod, OIDC disabled
+      IAM_BACKEND: "lldap"
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_ISSUER_URL: ""
+      # Agent IA
+      AGENT_ENABLED: "true"
+      AGENT_RATE_LIMIT: "20"
+      LITELLM_URL: ""
+      # CalDAV
+      CALDAV_EXTERNAL_URL: "https://asepprd.ewutelo.cloud/caldav"
+      # Timezone
+      TZ: "Europe/Paris"
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +59,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
+
+  celery:
+    build: .
+    command: ["celery", "-A", "ase_project", "worker", "--loglevel=info", "--concurrency=2"]
+    environment:
+      <<: *ase-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   caddy:
     image: caddy:2-alpine

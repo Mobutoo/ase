@@ -6,6 +6,8 @@ import {
   ListTodo,
   BarChart3,
   Trophy,
+  CalendarDays,
+  Users,
   Settings,
   Sparkles,
   PanelLeftClose,
@@ -18,6 +20,8 @@ import { useTimerStore } from "../../hooks/useTimer";
 const MAIN_NAV = [
   { path: "/", labelKey: "nav.focus", icon: Timer },
   { path: "/tasks", labelKey: "nav.tasks", icon: ListTodo },
+  { path: "/calendar", labelKey: "nav.calendar", icon: CalendarDays },
+  { path: "/circle", labelKey: "nav.circle", icon: Users },
   { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
   { path: "/leaderboard", labelKey: "nav.board", icon: Trophy },
 ];

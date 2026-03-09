@@ -1,10 +1,13 @@
-# Ase — Human-centric flow engine
+# Ase v3 "Circle Flow" — Human-centric flow engine
 # Core
 django==4.2.27
 django-allauth==0.57.2
 djangorestframework==3.15.2
 dj-database-url==2.3.0
 gunicorn==22.0.0
+
+# ASGI server (Django Channels)
+daphne==4.1.2
 
 # Database & Cache
 psycopg2-binary==2.9.10
@@ -14,3 +17,25 @@ redis==5.0.0
 pillow==10.3.0
 pytz==2023.3
 requests==2.32.4
+
+# Auth OIDC
+mozilla-django-oidc==4.0.1
+
+# CalDAV
+vobject==0.9.7
+icalendar==6.1.0
+
+# Real-time
+channels==4.1.0
+channels-redis==4.2.1
+
+# Agent IA
+httpx==0.27.0
+celery==5.4.0
+
+# Email transactionnel
+sib-api-v3-sdk==7.6.0
+
+# Security
+cryptography==43.0.0
+bcrypt==4.2.0
