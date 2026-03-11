@@ -16,7 +16,9 @@ from __future__ import annotations
 from typing import Type
 
 from .base import TaskSource
+from .grocy_adapter import GrocyAdapter
 from .local_adapter import LocalAdapter
+from .mealie_adapter import MealieAdapter
 from .plane_adapter import PlaneAdapter
 from .github_adapter import GitHubAdapter
 from .superproductivity_adapter import SuperProductivityAdapter
@@ -25,7 +27,9 @@ from .superproductivity_adapter import SuperProductivityAdapter
 # Registry maps source_type string → adapter class
 # New adapters are added here only; callers never import individual adapters.
 _REGISTRY: dict[str, Type[TaskSource]] = {
+    "grocy": GrocyAdapter,
     "local": LocalAdapter,
+    "mealie": MealieAdapter,
     "plane": PlaneAdapter,
     "github": GitHubAdapter,
     "superproductivity": SuperProductivityAdapter,

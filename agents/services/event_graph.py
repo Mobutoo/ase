@@ -43,6 +43,15 @@ TRANSPORT_KEYWORDS = frozenset([
 MEAL_KEYWORDS = frozenset([
     "dejeuner", "diner", "lunch", "dinner", "repas", "restaurant",
     "brunch", "petit-dejeuner", "breakfast",
+    # Food planning / cooking keywords (Mealie & Grocy integration)
+    "cuisine", "recette", "menu", "repas",
+])
+
+# Keywords related to grocery shopping and pantry management (Grocy integration)
+FOOD_STOCK_KEYWORDS = frozenset([
+    "courses", "marche", "marché", "ingredient", "ingrédient",
+    "stock", "peremption", "péremption", "frigo", "congelateur",
+    "congélateur", "garde-manger",
 ])
 
 
@@ -91,6 +100,7 @@ def analyze_event(event: Event) -> dict:
             "needs_transport": bool,
             "needs_meal": bool,
             "needs_accompany": bool,
+            "needs_food_stock": bool,
             "reasons": [str, ...],
         }
     """
@@ -98,6 +108,7 @@ def analyze_event(event: Event) -> dict:
         "needs_transport": False,
         "needs_meal": False,
         "needs_accompany": False,
+        "needs_food_stock": False,
         "reasons": [],
     }
 
@@ -116,6 +127,10 @@ def analyze_event(event: Event) -> dict:
     if _title_matches_keywords(title, MEAL_KEYWORDS):
         result["needs_meal"] = True
         result["reasons"].append(f"Event '{title}' matches meal keywords.")
+
+    if _title_matches_keywords(title, FOOD_STOCK_KEYWORDS):
+        result["needs_food_stock"] = True
+        result["reasons"].append(f"Event '{title}' matches food stock / shopping keywords.")
 
     # Accompany: if event has child members and is outside school hours
     if event.start_at:
@@ -198,6 +213,22 @@ def generate_dependents(event: Event) -> list[dict]:
             "location": event.location or "",
             "calendar_id": event.calendar_id,
             "members": list(event.members.filter(role="child").values_list("pk", flat=True)),
+            "reasons": analysis["reasons"],
+        })
+
+    if analysis["needs_food_stock"]:
+        # Propose a stock/shopping check one day before the event so ingredients
+        # can be sourced in time. The agent surfaces this as a Grocy review task.
+        stock_check_at = event.start_at - timedelta(days=1)
+        proposals.append({
+            "action_type": "task_propose",
+            "dependent_type": "food_stock",
+            "source_event_id": event.pk,
+            "title": f"Vérifier stocks & courses — {event.title}",
+            "start_at": stock_check_at.isoformat(),
+            "end_at": event.start_at.isoformat(),
+            "calendar_id": event.calendar_id,
+            "members": list(event.members.values_list("pk", flat=True)),
             "reasons": analysis["reasons"],
         })
 
