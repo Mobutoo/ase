@@ -36,11 +36,21 @@ services:
       DEBUG: "1"
       ALLOWED_HOSTS: "*"
       CSRF_TRUSTED_ORIGINS: "http://128.140.40.106,https://asepprd.ewutelo.cloud"
-      # IAM — use allauth for preprod, OIDC disabled
-      IAM_BACKEND: "lldap"
-      OIDC_CLIENT_ID: ""
-      OIDC_CLIENT_SECRET: ""
-      OIDC_ISSUER_URL: ""
+      # IAM — Zitadel OIDC (Flash Studio SSO)
+      # Switch to "zitadel" and fill OIDC_* / ZITADEL_* vars to enable SSO.
+      IAM_BACKEND: "${IAM_BACKEND:-zitadel}"
+      OIDC_CLIENT_ID: "${ZITADEL_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${ZITADEL_CLIENT_SECRET:-}"
+      OIDC_ISSUER_URL: "${ZITADEL_ISSUER_URL:-}"
+      OIDC_RP_SIGN_ALGO: "RS256"
+      OIDC_RP_SCOPES: "openid profile email"
+      # Zitadel Management API (user provisioning)
+      ZITADEL_API_URL: "${ZITADEL_API_URL:-}"
+      ZITADEL_SERVICE_TOKEN: "${ZITADEL_SERVICE_TOKEN:-}"
+      ZITADEL_ORG_ID: "${ZITADEL_ORG_ID:-}"
+      # Role mapping
+      OIDC_STAFF_GROUPS: "admin"
+      OIDC_SUPERUSER_GROUPS: ""
       # Agent IA
       AGENT_ENABLED: "true"
       AGENT_RATE_LIMIT: "20"

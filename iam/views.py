@@ -69,17 +69,29 @@ class OIDCCallbackView(View):
 class OIDCLogoutView(View):
     """Terminate the local Django session.
 
-    Optionally issues an RP-initiated logout to the IdP if
-    ``OIDC_OP_LOGOUT_ENDPOINT`` is configured.
+    If ``OIDC_OP_LOGOUT_ENDPOINT`` is configured (discovered from the IdP),
+    redirects to the IdP's end-session endpoint for RP-initiated logout.
+    Otherwise, simply clears the Django session and redirects locally.
 
     URL: ``POST /iam/oidc/logout/``
     """
 
     def post(self, request: HttpRequest) -> HttpResponse:
+        from django.conf import settings
         from django.contrib.auth import logout as django_logout
 
         django_logout(request)
+
         post_logout_url = os.environ.get("OIDC_POST_LOGOUT_REDIRECT_URL", "/")
+        end_session_endpoint = getattr(settings, "OIDC_OP_LOGOUT_ENDPOINT", "")
+
+        if end_session_endpoint:
+            # RP-initiated logout: redirect to IdP with post_logout_redirect_uri.
+            from urllib.parse import urlencode
+
+            params = urlencode({"post_logout_redirect_uri": post_logout_url})
+            return redirect(f"{end_session_endpoint}?{params}")
+
         return redirect(post_logout_url)
 
 

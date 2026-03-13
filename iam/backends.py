@@ -124,7 +124,14 @@ def _create_or_update_user(
     email = (claims.get("email") or "").lower().strip()
     sub = claims.get("sub", "")
     issuer = claims.get("iss", "")
-    display_name = claims.get("name") or claims.get("preferred_username") or email
+    display_name = (
+        claims.get("name")
+        or claims.get("preferred_username")
+        or claims.get("given_name", "")
+        or email
+    )
+    # Zitadel provides ``locale`` (e.g. "fr") — store for future i18n use.
+    locale = claims.get("locale", "")
 
     auto_create = os.environ.get("OIDC_AUTO_CREATE_USERS", "1") == "1"
 
@@ -270,8 +277,39 @@ def _update_user_attributes(
 
 
 def _sync_permissions(user: AbstractBaseUser, claims: dict) -> None:
-    """Update ``is_staff`` / ``is_superuser`` from OIDC group claims."""
-    groups: list[str] = claims.get("groups") or []
+    """Update ``is_staff`` / ``is_superuser`` from OIDC group claims.
+
+    Supports two claim formats:
+
+    1. **LLDAP / generic**: ``groups`` — a flat list of group names.
+    2. **Zitadel**: ``urn:zitadel:iam:org:project:roles`` — a dict whose keys
+       are role names and whose values are dicts of org IDs, e.g.::
+
+           {"admin": {"<org-id>": "..."}, "member": {"<org-id>": "..."}}
+
+    Both formats are merged into a single set of role/group names before
+    checking against ``OIDC_STAFF_GROUPS`` and ``OIDC_SUPERUSER_GROUPS``.
+    """
+    # --- Collect roles from all supported claim formats ---
+    groups: list[str] = list(claims.get("groups") or [])
+
+    # Zitadel project-level roles claim (no project ID in the key)
+    zitadel_roles = claims.get("urn:zitadel:iam:org:project:roles")
+    if isinstance(zitadel_roles, dict):
+        groups.extend(zitadel_roles.keys())
+
+    # Zitadel project-specific roles claims: urn:zitadel:iam:org:project:<id>:roles
+    # Scan all claims for the pattern to avoid hardcoding a project ID.
+    _ZITADEL_ROLE_PREFIX = "urn:zitadel:iam:org:project:"
+    _ZITADEL_ROLE_SUFFIX = ":roles"
+    for claim_key, claim_val in claims.items():
+        if (
+            claim_key.startswith(_ZITADEL_ROLE_PREFIX)
+            and claim_key.endswith(_ZITADEL_ROLE_SUFFIX)
+            and claim_key != "urn:zitadel:iam:org:project:roles"
+            and isinstance(claim_val, dict)
+        ):
+            groups.extend(claim_val.keys())
 
     staff_groups = {
         g.strip()
@@ -284,13 +322,23 @@ def _sync_permissions(user: AbstractBaseUser, claims: dict) -> None:
         if g.strip()
     }
 
-    new_is_staff = bool(staff_groups & set(groups))
-    new_is_superuser = bool(superuser_groups & set(groups))
+    role_set = set(groups)
+    new_is_staff = bool(staff_groups & role_set)
+    new_is_superuser = bool(superuser_groups & role_set)
 
     if hasattr(user, "is_staff"):
         user.is_staff = new_is_staff  # type: ignore[attr-defined]
     if hasattr(user, "is_superuser"):
         user.is_superuser = new_is_superuser  # type: ignore[attr-defined]
+
+    if groups:
+        logger.debug(
+            "OIDC _sync_permissions: user=%r roles=%r staff=%s super=%s",
+            getattr(user, "email", user.pk),
+            groups,
+            new_is_staff,
+            new_is_superuser,
+        )
 
 
 def _handle_invite_token(user: AbstractBaseUser, request: Any) -> None:

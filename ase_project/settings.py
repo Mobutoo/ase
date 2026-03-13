@@ -182,13 +182,44 @@ N8N_WEBHOOK_REFLECTION = os.environ.get("N8N_WEBHOOK_REFLECTION", "")
 N8N_WEBHOOK_SECRET = os.environ.get("N8N_WEBHOOK_SECRET", "")
 
 # --- OIDC Authentication ---
+# Endpoints are auto-derived from the OIDC discovery document when
+# OIDC_ISSUER_URL is set.  Falls back to empty strings when OIDC is disabled.
+_OIDC_ISSUER_URL = os.environ.get('OIDC_ISSUER_URL', '')
+
+if _OIDC_ISSUER_URL:
+    try:
+        from iam.discovery import get_oidc_endpoints
+        _oidc_ep = get_oidc_endpoints(_OIDC_ISSUER_URL)
+    except Exception:
+        # Discovery unavailable at import time (e.g. first boot) — use empty.
+        _oidc_ep = {
+            "authorization_endpoint": "",
+            "token_endpoint": "",
+            "userinfo_endpoint": "",
+            "jwks_uri": "",
+            "end_session_endpoint": "",
+            "issuer": _OIDC_ISSUER_URL,
+        }
+else:
+    _oidc_ep = {
+        "authorization_endpoint": "",
+        "token_endpoint": "",
+        "userinfo_endpoint": "",
+        "jwks_uri": "",
+        "end_session_endpoint": "",
+        "issuer": "",
+    }
+
 OIDC_RP_CLIENT_ID = os.environ.get('OIDC_CLIENT_ID', '')
 OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_CLIENT_SECRET', '')
-OIDC_OP_AUTHORIZATION_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/authorize'
-OIDC_OP_TOKEN_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/oauth/token'
-OIDC_OP_USER_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/oidc/v1/userinfo'
-OIDC_OP_JWKS_ENDPOINT = os.environ.get('OIDC_ISSUER_URL', '') + '/.well-known/jwks.json'
-OIDC_RP_SIGN_ALGO = 'RS256'
+OIDC_OP_AUTHORIZATION_ENDPOINT = _oidc_ep["authorization_endpoint"]
+OIDC_OP_TOKEN_ENDPOINT = _oidc_ep["token_endpoint"]
+OIDC_OP_USER_ENDPOINT = _oidc_ep["userinfo_endpoint"]
+OIDC_OP_JWKS_ENDPOINT = _oidc_ep["jwks_uri"]
+OIDC_OP_LOGOUT_ENDPOINT = _oidc_ep["end_session_endpoint"]
+OIDC_OP_ISSUER = _oidc_ep["issuer"]
+OIDC_RP_SIGN_ALGO = os.environ.get('OIDC_RP_SIGN_ALGO', 'RS256')
+OIDC_RP_SCOPES = os.environ.get('OIDC_RP_SCOPES', 'openid profile email')
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
