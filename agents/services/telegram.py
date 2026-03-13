@@ -50,39 +50,90 @@ def _post(method: str, payload: dict[str, Any]) -> dict:
 
 
 def _format_proposal(action: object) -> str:
-    """Format an AgentAction proposal as a readable Telegram message."""
+    """Format an AgentAction proposal as a readable Telegram message with rich details."""
     payload = action.payload or {}
-    action_type = action.action_type
     dependent_type = payload.get("dependent_type", "")
     title = payload.get("title", "(sans titre)")
     start_at_raw = payload.get("start_at")
+    end_at_raw = payload.get("end_at")
     location = payload.get("location", "")
 
-    # Format datetime
+    # Format datetimes
     start_str = ""
+    end_str = ""
     if start_at_raw:
         try:
             dt = datetime.fromisoformat(start_at_raw)
-            start_str = dt.strftime("%A %d %B %Y a %H:%M")
+            start_str = dt.strftime("%A %d %B %H:%M")
         except ValueError:
             start_str = start_at_raw
+    if end_at_raw:
+        try:
+            dt = datetime.fromisoformat(end_at_raw)
+            end_str = dt.strftime("%H:%M")
+        except ValueError:
+            end_str = end_at_raw
+
+    # Icon based on dependent type
+    icon_map = {
+        "transport": "🚗",
+        "meal": "🍽️",
+        "accompany": "👶",
+        "food_stock": "🛒",
+    }
+    icon = icon_map.get(dependent_type, "📋")
 
     lines = [
-        f"*Proposition de l'agent* #{action.pk}",
-        f"Type : `{action_type}` / `{dependent_type}`",
-        f"Titre : {title}",
+        f"{icon} *{title}*",
+        "",
     ]
-    if start_str:
-        lines.append(f"Date : {start_str}")
-    if location:
-        lines.append(f"Lieu : {location}")
 
+    if start_str and end_str:
+        lines.append(f"📅 {start_str} — {end_str}")
+    elif start_str:
+        lines.append(f"📅 {start_str}")
+
+    if location:
+        lines.append(f"📍 {location}")
+
+    # Transport-specific details
+    if dependent_type == "transport":
+        travel_min = payload.get("travel_minutes_estimated")
+        distance = payload.get("travel_distance_km")
+        route = payload.get("travel_route_summary")
+        origin = payload.get("origin_address")
+
+        if origin:
+            lines.append(f"🏠 Départ : {origin}")
+        if travel_min:
+            lines.append(f"⏱️ Durée estimée : {travel_min} min")
+        if distance:
+            lines.append(f"📏 Distance : {distance} km")
+        if route:
+            lines.append(f"🛣️ Itinéraire : {route}")
+
+    # Meal-specific: restaurant suggestions
+    if dependent_type == "meal":
+        suggestions = payload.get("restaurant_suggestions", [])
+        if suggestions:
+            lines.append("")
+            lines.append("*Restaurants suggérés :*")
+            for i, r in enumerate(suggestions[:3], 1):
+                rating = f" ⭐{r['rating']}" if r.get("rating") else ""
+                price = f" {r['price_level']}" if r.get("price_level") else ""
+                lines.append(f"  {i}. {r['name']}{rating}{price}")
+                if r.get("address"):
+                    lines.append(f"     _{r['address']}_")
+
+    # Reasons
     reasons = payload.get("reasons", [])
     if reasons:
-        lines.append("\n_Raisons :_")
+        lines.append("")
+        lines.append("_Raisons :_")
         lines.extend(f"  • {r}" for r in reasons)
 
-    lines.append("\nVeuillez approuver ou rejeter cette proposition :")
+    lines.append("")
+    lines.append(f"_Proposition #{action.pk}_")
     return "\n".join(lines)
 
 
