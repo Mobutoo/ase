@@ -172,7 +172,7 @@ export function CalendarPage() {
     clearError,
   } = useCalendarStore();
 
-  const { members, currentCircle, fetchMembers } = useCircleStore();
+  const { members, currentCircle, fetchCircles, fetchMembers } = useCircleStore();
 
   // Modals state
   const [createOpen, setCreateOpen] = useState(false);
@@ -194,11 +194,12 @@ export function CalendarPage() {
     onForce: (() => void) | null;
   }>({ open: false, incoming: null, conflicts: [], onForce: null });
 
-  // Initial fetch — events + calendars (needed for auto-selecting calendar on create)
+  // Initial fetch — events + calendars + circles
   useEffect(() => {
     void fetchEvents();
     void fetchCalendars();
-  }, [fetchEvents, fetchCalendars]);
+    void fetchCircles();
+  }, [fetchEvents, fetchCalendars, fetchCircles]);
 
   // Fetch circle members for filter sidebar
   useEffect(() => {
