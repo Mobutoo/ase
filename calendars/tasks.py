@@ -61,6 +61,28 @@ def sync_google_calendars() -> dict[str, list]:
     return results
 
 
+@shared_task(name="calendars.tasks.sync_google_calendars_single")
+def sync_google_calendars_single(sync_config_pk: int) -> dict[str, int | str]:
+    """Run a sync cycle for a single GoogleCalendarSync by primary key.
+
+    Used by the ``sync-now`` API action for on-demand sync.
+    """
+    from calendars.models import GoogleCalendarSync
+    from calendars.sync.google import sync_calendar
+
+    try:
+        sync_config = GoogleCalendarSync.objects.select_related(
+            "ase_calendar", "member"
+        ).get(pk=sync_config_pk)
+    except GoogleCalendarSync.DoesNotExist:
+        logger.warning("GoogleCalendarSync %s does not exist.", sync_config_pk)
+        return {"error": "not found"}
+
+    stats = sync_calendar(sync_config)
+    logger.info("Google sync (on-demand) %s: %s", sync_config.pk, stats)
+    return stats
+
+
 # ---------------------------------------------------------------------------
 # iCal URL subscription sync
 # ---------------------------------------------------------------------------

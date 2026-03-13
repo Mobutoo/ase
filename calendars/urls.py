@@ -15,6 +15,9 @@ REST API endpoints (under /api/calendars/):
     GET/POST   /api/calendars/subscriptions/
     GET/PUT/PATCH/DELETE /api/calendars/subscriptions/<pk>/
     POST       /api/calendars/subscriptions/<pk>/refresh/
+    GET/POST   /api/calendars/google-syncs/
+    GET/PUT/PATCH/DELETE /api/calendars/google-syncs/<pk>/
+    POST       /api/calendars/google-syncs/<pk>/sync-now/
     POST       /api/calendars/ics/import/
     GET        /api/calendars/ics/export/<calendar_id>/
 
@@ -52,6 +55,7 @@ from .views import (
     CalendarSubscriptionViewSet,
     CalendarViewSet,
     EventViewSet,
+    GoogleCalendarSyncViewSet,
     IcsExportView,
     IcsImportView,
 )
@@ -69,6 +73,7 @@ router = DefaultRouter()
 router.register(r"calendars", CalendarViewSet, basename="calendar")
 router.register(r"events", EventViewSet, basename="event")
 router.register(r"subscriptions", CalendarSubscriptionViewSet, basename="subscription")
+router.register(r"google-syncs", GoogleCalendarSyncViewSet, basename="google-sync")
 
 urlpatterns = router.urls + [
     path("ics/import/", IcsImportView.as_view(), name="ics-import"),
