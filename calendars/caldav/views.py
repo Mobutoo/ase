@@ -38,6 +38,7 @@ from xml.etree import ElementTree as ET
 from django.http import HttpRequest, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 
 from ..models import Calendar, Event
 from ..caldav.auth import caldav_auth_required
@@ -102,7 +103,7 @@ def _prop_response(href: str, props_ok: dict, props_nf: list | None = None) -> E
     return resp
 
 
-@method_decorator(caldav_auth_required, name="dispatch")
+@method_decorator([csrf_exempt, caldav_auth_required], name="dispatch")
 class CalDavRootView(View):
     """Handles PROPFIND and MKCALENDAR on the CalDAV root / user principal."""
 
@@ -188,7 +189,7 @@ class CalDavRootView(View):
         return response
 
 
-@method_decorator(caldav_auth_required, name="dispatch")
+@method_decorator([csrf_exempt, caldav_auth_required], name="dispatch")
 class CalDavCalendarView(View):
     """Handles PROPFIND and REPORT on a calendar collection."""
 
@@ -312,7 +313,7 @@ class CalDavCalendarView(View):
         return HttpResponse(_multistatus(*responses), content_type=_CONTENT_TYPE_XML, status=207)
 
 
-@method_decorator(caldav_auth_required, name="dispatch")
+@method_decorator([csrf_exempt, caldav_auth_required], name="dispatch")
 class CalDavEventView(View):
     """Handles GET, PUT, DELETE on a single event resource."""
 
