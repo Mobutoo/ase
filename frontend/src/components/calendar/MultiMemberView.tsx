@@ -1,7 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import type { CalendarEvent } from "../../types/calendar";
 import type { CircleMember } from "../../types/circle";
-import { EventCard } from "./EventCard";
 import { Users } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -137,11 +136,11 @@ export function MultiMemberView({
           >
             <div className="flex items-center gap-2 justify-center">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ring-2 ring-offset-1 ring-offset-ase-bg"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 border-2"
                 style={{
                   backgroundColor: m.avatarColor + "30",
                   color: m.avatarColor,
-                  ringColor: m.avatarColor + "40",
+                  borderColor: m.avatarColor + "50",
                 }}
               >
                 {m.avatarEmoji || m.displayName[0]?.toUpperCase()}
