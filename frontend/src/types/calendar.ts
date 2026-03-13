@@ -22,6 +22,25 @@ export interface CalendarEvent {
   validatedBy?: CircleMember;
   validatedAt?: string;
   reminders: EventReminder[];
+  /** True when the event originates from an iCal subscription (read-only). */
+  isSubscribed?: boolean;
+  /** ID of the subscription that imported this event, if any. */
+  subscriptionId?: string | null;
+  /** Google Calendar event ID, if synced. */
+  googleEventId?: string;
+}
+
+export interface CalendarSubscription {
+  id: string;
+  memberId: string;
+  displayName: string;
+  icalUrl: string;
+  color: string;
+  refreshMinutes: number;
+  lastFetchedAt: string | null;
+  enabled: boolean;
+  importedEventCount: number;
+  createdAt: string;
 }
 
 export interface Calendar {
