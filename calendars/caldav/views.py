@@ -2,13 +2,16 @@ from __future__ import annotations
 
 """CalDAV server views (RFC 4791).
 
-Implements a minimal but functional CalDAV server:
+Implements a CalDAV server compatible with Apple Calendar, DAVx5, and
+Thunderbird:
 
-- PROPFIND  — property discovery on calendar collections and resources
-- REPORT    — CALENDAR-QUERY and CALENDAR-MULTIGET
-- GET       — fetch a single VEVENT as .ics
-- PUT       — create or update a VEVENT
-- DELETE    — remove a VEVENT
+- OPTIONS     — DAV capability discovery (``DAV: 1, 2, calendar-access``)
+- PROPFIND    — property discovery on principal/calendar/event resources
+- REPORT      — CALENDAR-QUERY and CALENDAR-MULTIGET
+- MKCALENDAR  — create a new calendar collection (RFC 4791 sec 5.3.1)
+- GET         — fetch a single VEVENT as .ics
+- PUT         — create or update a VEVENT (If-Match / If-None-Match support)
+- DELETE      — remove a VEVENT
 
 All views require HTTP Basic authentication via the ``caldav_auth_required``
 decorator.  The principal URL hierarchy is::
@@ -18,8 +21,11 @@ decorator.  The principal URL hierarchy is::
     /caldav/<username>/<calendar_id>/     — calendar collection
     /caldav/<username>/<calendar_id>/<uid>.ics  — event resource
 
+Autodiscovery (RFC 6764)::
+
+    /.well-known/caldav  → 301 → /caldav/
+
 Limitations / TODO:
-- MKCALENDAR not yet implemented (create via REST API)
 - FREEBUSY not yet implemented
 - ACL / sharing not yet implemented
 """
@@ -98,22 +104,88 @@ def _prop_response(href: str, props_ok: dict, props_nf: list | None = None) -> E
 
 @method_decorator(caldav_auth_required, name="dispatch")
 class CalDavRootView(View):
-    """Handles PROPFIND on the CalDAV root / user principal."""
+    """Handles PROPFIND and MKCALENDAR on the CalDAV root / user principal."""
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if request.method == "PROPFIND":
             return self.propfind(request, *args, **kwargs)
-        return HttpResponse(status=405, headers={"Allow": "PROPFIND, OPTIONS"})
+        if request.method == "MKCALENDAR":
+            return self.mkcalendar(request, *args, **kwargs)
+        if request.method == "OPTIONS":
+            return self.options(request, *args, **kwargs)
+        return HttpResponse(status=405, headers={"Allow": "OPTIONS, PROPFIND, MKCALENDAR"})
+
+    def options(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        response = HttpResponse(status=200)
+        response["Allow"] = "OPTIONS, PROPFIND, MKCALENDAR"
+        response["DAV"] = "1, 2, calendar-access"
+        return response
 
     def propfind(self, request: HttpRequest, username: str) -> HttpResponse:
         href = f"/caldav/{username}/"
+
+        # calendar-home-set tells clients where calendars live (RFC 4791 sec 6.2.1)
+        home_set = ET.Element(f"{{{NS_CAL}}}calendar-home-set")
+        home_href = ET.SubElement(home_set, f"{{{NS_DAV}}}href")
+        home_href.text = f"/caldav/{username}/"
+
         props_ok = {
             f"{{{NS_DAV}}}displayname": username,
             f"{{{NS_DAV}}}resourcetype": _build_collection_type(principal=True),
             f"{{{NS_DAV}}}current-user-principal": _current_principal(username),
+            f"{{{NS_CAL}}}calendar-home-set": home_set,
         }
-        body = _multistatus(_prop_response(href, props_ok))
+        responses = [_prop_response(href, props_ok)]
+
+        # Depth:1 — list all user's calendars (Apple Calendar, DAVx5 discovery)
+        depth = request.META.get("HTTP_DEPTH", "0")
+        if depth in ("1", "infinity"):
+            calendars = Calendar.objects.filter(
+                owner__user=request.caldav_user, caldav_enabled=True
+            )
+            for cal in calendars:
+                cal_href = f"/caldav/{username}/{cal.pk}/"
+                cal_props = {
+                    f"{{{NS_DAV}}}displayname": cal.name,
+                    f"{{{NS_DAV}}}resourcetype": _build_collection_type(calendar=True),
+                    f"{{{NS_CS}}}getctag": _calendar_ctag(cal),
+                }
+                responses.append(_prop_response(cal_href, cal_props))
+
+        body = _multistatus(*responses)
         return HttpResponse(body, content_type=_CONTENT_TYPE_XML, status=207)
+
+    def mkcalendar(self, request: HttpRequest, username: str) -> HttpResponse:
+        """Handle MKCALENDAR to create a new calendar collection (RFC 4791 sec 5.3.1)."""
+        if request.caldav_user.username != username:
+            return HttpResponse(status=403)
+
+        # Parse optional displayname from the request body
+        cal_name = "New Calendar"
+        if request.body:
+            try:
+                root = ET.fromstring(request.body)
+                displayname_el = root.find(f".//{{{NS_DAV}}}displayname")
+                if displayname_el is not None and displayname_el.text:
+                    cal_name = displayname_el.text
+            except ET.ParseError:
+                return HttpResponse(status=400)
+
+        # Find the CircleMember for this user
+        from circles.models import CircleMember
+
+        member = CircleMember.objects.filter(user=request.caldav_user).first()
+        if member is None:
+            return HttpResponse(status=403)
+
+        calendar = Calendar.objects.create(
+            owner=member,
+            name=cal_name,
+            caldav_enabled=True,
+        )
+        response = HttpResponse(status=201)
+        response["Location"] = f"/caldav/{username}/{calendar.pk}/"
+        return response
 
 
 @method_decorator(caldav_auth_required, name="dispatch")
@@ -125,7 +197,15 @@ class CalDavCalendarView(View):
             return self.propfind(request, *args, **kwargs)
         if request.method == "REPORT":
             return self.report(request, *args, **kwargs)
-        return HttpResponse(status=405, headers={"Allow": "PROPFIND, REPORT, OPTIONS"})
+        if request.method == "OPTIONS":
+            return self.options(request, *args, **kwargs)
+        return HttpResponse(status=405, headers={"Allow": "OPTIONS, PROPFIND, REPORT"})
+
+    def options(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        response = HttpResponse(status=200)
+        response["Allow"] = "OPTIONS, PROPFIND, REPORT"
+        response["DAV"] = "1, 2, calendar-access"
+        return response
 
     def propfind(self, request: HttpRequest, username: str, calendar_id: int) -> HttpResponse:
         try:
@@ -244,7 +324,15 @@ class CalDavEventView(View):
             return self.put(request, *args, **kwargs)
         if method == "DELETE":
             return self.delete(request, *args, **kwargs)
-        return HttpResponse(status=405, headers={"Allow": "GET, PUT, DELETE, OPTIONS"})
+        if method == "OPTIONS":
+            return self.options(request, *args, **kwargs)
+        return HttpResponse(status=405, headers={"Allow": "OPTIONS, GET, PUT, DELETE"})
+
+    def options(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        response = HttpResponse(status=200)
+        response["Allow"] = "OPTIONS, GET, PUT, DELETE"
+        response["DAV"] = "1, 2, calendar-access"
+        return response
 
     def get(self, request: HttpRequest, username: str, calendar_id: int, uid: str) -> HttpResponse:
         try:
@@ -284,8 +372,21 @@ class CalDavEventView(View):
         ev_data = parsed_list[0]
         event_uid = ev_data.get("uid") or uid
 
+        # ETag conditional headers (RFC 4791 / RFC 2616)
+        if_match = request.META.get("HTTP_IF_MATCH", "").strip('"')
+        if_none_match = request.META.get("HTTP_IF_NONE_MATCH", "").strip('"')
+
         try:
             event = Event.objects.get(uid=event_uid, calendar=calendar)
+
+            # If-Match: update only if ETag matches (prevents lost updates)
+            if if_match and event.etag != if_match:
+                return HttpResponse(status=412)  # Precondition Failed
+
+            # If-None-Match: * means "only create, don't overwrite"
+            if if_none_match == "*":
+                return HttpResponse(status=412)  # Precondition Failed — resource exists
+
             # Update in place — immutable uid preserved
             event.title = ev_data.get("title", event.title)
             event.description = ev_data.get("description", event.description)
@@ -299,6 +400,10 @@ class CalDavEventView(View):
             event.save()
             created = False
         except Event.DoesNotExist:
+            # If-Match present but resource doesn't exist — fail
+            if if_match:
+                return HttpResponse(status=412)  # Precondition Failed
+
             event = Event.objects.create(
                 uid=event_uid,
                 calendar=calendar,

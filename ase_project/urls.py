@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.http import HttpResponse
+from django.views.generic import RedirectView
 from django.views.static import serve as static_serve
 import os
 
@@ -43,8 +44,10 @@ urlpatterns = [
     path("oidc/", include("mozilla_django_oidc.urls")),
     path("iam/", include("iam.urls", namespace="iam")),
     path("caldav/", include((caldav_urlpatterns, "caldav"))),
+    # RFC 6764 CalDAV autodiscovery — Apple Calendar, DAVx5, Thunderbird
+    path(".well-known/caldav", RedirectView.as_view(url="/caldav/", permanent=True)),
     # Legacy app views (profile, etc.)
     path("legacy/", include("app.urls")),
     # React SPA — catch all remaining routes (MUST be last)
-    re_path(r"^(?!admin|api|accounts|static|assets|legacy|oidc|iam|caldav).*$", serve_react),
+    re_path(r"^(?!admin|api|accounts|static|assets|legacy|oidc|iam|caldav|\.well-known).*$", serve_react),
 ]
