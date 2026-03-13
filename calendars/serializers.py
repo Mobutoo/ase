@@ -39,6 +39,16 @@ class EventExceptionSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+class MemberSummarySerializer(serializers.Serializer):
+    """Lightweight read-only serializer for members nested inside events."""
+
+    id = serializers.IntegerField(source="pk")
+    display_name = serializers.CharField()
+    avatar_color = serializers.CharField()
+    avatar_emoji = serializers.CharField()
+    role = serializers.CharField()
+
+
 class EventSerializer(serializers.ModelSerializer):
     reminders = EventReminderSerializer(many=True, required=False)
 
@@ -90,6 +100,14 @@ class EventSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj: Event) -> bool:
         return obj.subscription_id is not None
+
+    def to_representation(self, instance: Event) -> dict:
+        """Override to return full member objects instead of just PKs."""
+        data = super().to_representation(instance)
+        data["members"] = MemberSummarySerializer(
+            instance.members.all(), many=True
+        ).data
+        return data
 
     def validate(self, attrs: dict) -> dict:
         start_at = attrs.get("start_at") or (

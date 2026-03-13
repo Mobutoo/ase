@@ -157,6 +157,7 @@ export function CalendarPage() {
     loading,
     error,
     fetchEvents,
+    fetchCalendars,
     createEvent,
     deleteEvent,
     setView,
@@ -186,10 +187,11 @@ export function CalendarPage() {
     onForce: (() => void) | null;
   }>({ open: false, incoming: null, conflicts: [], onForce: null });
 
-  // Initial fetch
+  // Initial fetch — events + calendars (needed for auto-selecting calendar on create)
   useEffect(() => {
     void fetchEvents();
-  }, [fetchEvents]);
+    void fetchCalendars();
+  }, [fetchEvents, fetchCalendars]);
 
   // Fetch circle members for filter sidebar
   useEffect(() => {

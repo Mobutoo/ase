@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { CalendarEvent, Calendar, CalendarView } from "../types/calendar";
+import type { CircleMember } from "../types/circle";
 
 // ---------------------------------------------------------------------------
 // API helpers — thin wrappers over fetch; mirrors client.ts pattern
@@ -30,6 +31,60 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
 }
 
 // ---------------------------------------------------------------------------
+// Payload conversion: frontend (camelCase) → API (camelCase via DRF camel-case)
+// The DRF camel-case package handles key conversion automatically.
+// We only need to handle structural transformations:
+//   - members: send IDs instead of full objects
+//   - reminders: strip frontend-only `id` field
+//   - calendar: auto-select if missing
+// ---------------------------------------------------------------------------
+
+function toWritePayload(
+  payload: Partial<CalendarEvent>,
+  calendars: Calendar[],
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) continue;
+
+    // Convert calendarId → calendar (FK PK value)
+    if (key === "calendarId") {
+      result["calendar"] = value;
+      continue;
+    }
+
+    // Convert members from objects to IDs for M2M write
+    if (key === "members") {
+      const members = value as CircleMember[];
+      result["members"] = members.map((m) =>
+        typeof m === "object" && m !== null ? m.id : m
+      );
+      continue;
+    }
+
+    // Strip frontend-only `id` from reminders
+    if (key === "reminders") {
+      const reminders = value as Array<Record<string, unknown>>;
+      result["reminders"] = reminders.map((r) => ({
+        offsetMinutes: r.offsetMinutes,
+        channel: r.channel,
+      }));
+      continue;
+    }
+
+    result[key] = value;
+  }
+
+  // Auto-select first calendar if none provided
+  if (!result["calendar"] && calendars.length > 0) {
+    result["calendar"] = calendars[0].id;
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // State shape
 // ---------------------------------------------------------------------------
 
@@ -56,7 +111,7 @@ interface CalendarState {
 // Store
 // ---------------------------------------------------------------------------
 
-export const useCalendarStore = create<CalendarState>((set, _get) => ({
+export const useCalendarStore = create<CalendarState>((set, get) => ({
   events: [],
   calendars: [],
   currentView: "week",
@@ -94,9 +149,10 @@ export const useCalendarStore = create<CalendarState>((set, _get) => ({
   createEvent: async (payload) => {
     set({ loading: true, error: null });
     try {
+      const apiPayload = toWritePayload(payload, get().calendars);
       const created = await apiRequest<CalendarEvent>("/api/calendar/events/", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(apiPayload),
       });
       set((prev) => ({ events: [created, ...prev.events], loading: false }));
       return created;
@@ -111,9 +167,10 @@ export const useCalendarStore = create<CalendarState>((set, _get) => ({
 
   updateEvent: async (id, payload) => {
     try {
+      const apiPayload = toWritePayload(payload, get().calendars);
       const updated = await apiRequest<CalendarEvent>(`/api/calendar/events/${id}/`, {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(apiPayload),
       });
       set((prev) => ({
         events: prev.events.map((e) => (e.id === id ? { ...e, ...updated } : e)),
