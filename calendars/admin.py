@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.contrib import admin
 
-from .models import Calendar, Event, EventException, EventReminder
+from .models import Calendar, Event, EventException, EventReminder, GoogleCalendarSync
 
 
 class EventReminderInline(admin.TabularInline):
@@ -41,7 +41,7 @@ class EventAdmin(admin.ModelAdmin):
     ]
     list_filter = ["event_type", "visibility", "all_day", "calendar"]
     search_fields = ["title", "description", "uid"]
-    readonly_fields = ["uid", "etag", "created_at", "updated_at"]
+    readonly_fields = ["uid", "etag", "google_event_id", "created_at", "updated_at"]
     raw_id_fields = ["calendar", "parent_event", "linked_task", "validated_by"]
     filter_horizontal = ["members"]
     date_hierarchy = "start_at"
@@ -92,9 +92,9 @@ class EventAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "CalDAV",
+            "Sync",
             {
-                "fields": ["etag", "caldav_raw"],
+                "fields": ["google_event_id", "etag", "caldav_raw"],
                 "classes": ["collapse"],
             },
         ),
@@ -121,3 +121,24 @@ class EventReminderAdmin(admin.ModelAdmin):
     list_filter = ["channel"]
     raw_id_fields = ["event", "member"]
     readonly_fields = ["created_at"]
+
+
+@admin.register(GoogleCalendarSync)
+class GoogleCalendarSyncAdmin(admin.ModelAdmin):
+    list_display = [
+        "member",
+        "ase_calendar",
+        "google_calendar_id",
+        "sync_direction",
+        "enabled",
+        "last_synced_at",
+        "created_at",
+    ]
+    list_filter = ["enabled", "sync_direction"]
+    search_fields = [
+        "google_calendar_id",
+        "google_account_email",
+        "member__user__username",
+    ]
+    raw_id_fields = ["member", "ase_calendar"]
+    readonly_fields = ["sync_token", "last_synced_at", "created_at"]
