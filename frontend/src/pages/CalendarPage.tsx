@@ -89,6 +89,13 @@ interface AgendaViewProps {
   onEventClick?: (e: CalendarEvent) => void;
 }
 
+function toLocalDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function AgendaView({ events, anchorDate, onEventClick }: AgendaViewProps) {
   const anchor = new Date(anchorDate + "T00:00:00");
   const days = Array.from({ length: 14 }, (_, i) => {
@@ -97,14 +104,14 @@ function AgendaView({ events, anchorDate, onEventClick }: AgendaViewProps) {
     return d;
   });
 
-  const toKey = (d: Date) => d.toISOString().slice(0, 10);
+  const toKey = (d: Date) => toLocalDateKey(d);
 
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       {days.map((day) => {
         const key = toKey(day);
         const dayEvents = events.filter(
-          (e) => new Date(e.startAt).toISOString().slice(0, 10) === key
+          (e) => toLocalDateKey(new Date(e.startAt)) === key
         );
         if (dayEvents.length === 0) return null;
 
@@ -266,8 +273,8 @@ export function CalendarPage() {
 
   const headerLabel = formatHeaderLabel(selectedDate, currentView);
 
-  // Today shortcut
-  const today = new Date().toISOString().slice(0, 10);
+  // Today shortcut (local date, not UTC)
+  const today = toLocalDateKey(new Date());
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-ase-bg">

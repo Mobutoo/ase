@@ -115,7 +115,13 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   events: [],
   calendars: [],
   currentView: "week",
-  selectedDate: new Date().toISOString().slice(0, 10),
+  selectedDate: (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })(),
   loading: false,
   error: null,
 
