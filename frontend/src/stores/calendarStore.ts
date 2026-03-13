@@ -65,7 +65,7 @@ function toWritePayload(
 
     // Strip frontend-only `id` from reminders
     if (key === "reminders") {
-      const reminders = value as Array<Record<string, unknown>>;
+      const reminders = value as unknown as Array<{ offsetMinutes?: number; channel?: string }>;
       result["reminders"] = reminders.map((r) => ({
         offsetMinutes: r.offsetMinutes,
         channel: r.channel,
