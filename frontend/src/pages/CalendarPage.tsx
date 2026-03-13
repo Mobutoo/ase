@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Filter,
   Loader2,
+  Users,
 } from "lucide-react";
 import { useCalendarStore } from "../stores/calendarStore";
 import { useCircleStore } from "../stores/circleStore";
@@ -18,6 +19,7 @@ import type { CalendarEvent } from "../types/calendar";
 import { WeekView } from "../components/calendar/WeekView";
 import { DayView } from "../components/calendar/DayView";
 import { MonthView } from "../components/calendar/MonthView";
+import { MultiMemberView } from "../components/calendar/MultiMemberView";
 import { QuickAddBar } from "../components/calendar/QuickAddBar";
 import { EventCreateModal } from "../components/calendar/EventCreateModal";
 import { RecurringEditDialog } from "../components/calendar/RecurringEditDialog";
@@ -179,6 +181,7 @@ export function CalendarPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [multiMemberMode, setMultiMemberMode] = useState(false);
 
   // Recurring & conflict dialog state
   const [recurringDialog, setRecurringDialog] = useState<{
@@ -350,6 +353,23 @@ export function CalendarPage() {
             {headerLabel}
           </span>
 
+          {/* Multi-member view toggle */}
+          {members.length > 1 && (currentView === "week" || multiMemberMode) && (
+            <button
+              type="button"
+              onClick={() => setMultiMemberMode((p) => !p)}
+              className={[
+                "w-8 h-8 flex items-center justify-center rounded-lg border text-ase-muted transition-colors",
+                multiMemberMode
+                  ? "border-ase-gold/40 text-ase-gold bg-ase-gold/10"
+                  : "border-ase-border hover:text-white hover:border-ase-border-2",
+              ].join(" ")}
+              title="Multi-member view"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Member filter toggle */}
           {members.length > 0 && (
             <button
@@ -438,12 +458,20 @@ export function CalendarPage() {
               onEventClick={() => {}}
             />
           )}
-          {currentView === "week" && (
+          {currentView === "week" && !multiMemberMode && (
             <WeekView
               anchorDate={selectedDate}
               events={filteredEvents}
               onEventClick={() => {}}
               onDayClick={(date) => { navigateDate(date); setView("day"); }}
+            />
+          )}
+          {currentView === "week" && multiMemberMode && members.length > 0 && (
+            <MultiMemberView
+              date={selectedDate}
+              events={filteredEvents}
+              members={members}
+              onEventClick={() => {}}
             />
           )}
           {currentView === "month" && (
