@@ -12,6 +12,9 @@ REST API endpoints (under /api/calendars/):
     POST       /api/calendars/events/<pk>/edit-this/
     POST       /api/calendars/events/<pk>/edit-following/
     PATCH      /api/calendars/events/<pk>/edit-all/
+    GET/POST   /api/calendars/subscriptions/
+    GET/PUT/PATCH/DELETE /api/calendars/subscriptions/<pk>/
+    POST       /api/calendars/subscriptions/<pk>/refresh/
     POST       /api/calendars/ics/import/
     GET        /api/calendars/ics/export/<calendar_id>/
 
@@ -46,6 +49,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CalendarSubscriptionViewSet,
     CalendarViewSet,
     EventViewSet,
     IcsExportView,
@@ -64,6 +68,7 @@ from .caldav.views import (
 router = DefaultRouter()
 router.register(r"calendars", CalendarViewSet, basename="calendar")
 router.register(r"events", EventViewSet, basename="event")
+router.register(r"subscriptions", CalendarSubscriptionViewSet, basename="subscription")
 
 urlpatterns = router.urls + [
     path("ics/import/", IcsImportView.as_view(), name="ics-import"),

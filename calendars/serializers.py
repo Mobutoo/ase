@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from .models import Calendar, Event, EventException, EventReminder
+from .models import (
+    Calendar,
+    CalendarSubscription,
+    Event,
+    EventException,
+    EventReminder,
+    GoogleCalendarSync,
+)
 
 
 class EventReminderSerializer(serializers.ModelSerializer):
@@ -35,6 +42,8 @@ class EventExceptionSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     reminders = EventReminderSerializer(many=True, required=False)
 
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         model = Event
         fields = [
@@ -59,11 +68,28 @@ class EventSerializer(serializers.ModelSerializer):
             "validated_by",
             "validated_at",
             "etag",
+            "subscription",
+            "ical_uid",
+            "google_event_id",
+            "is_subscribed",
             "reminders",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "uid", "etag", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "uid",
+            "etag",
+            "subscription",
+            "ical_uid",
+            "google_event_id",
+            "is_subscribed",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_is_subscribed(self, obj: Event) -> bool:
+        return obj.subscription_id is not None
 
     def validate(self, attrs: dict) -> dict:
         start_at = attrs.get("start_at") or (
@@ -133,6 +159,37 @@ class CalendarSerializer(serializers.ModelSerializer):
 
     def get_event_count(self, obj: Calendar) -> int:
         return obj.events.count()
+
+
+class CalendarSubscriptionSerializer(serializers.ModelSerializer):
+    imported_event_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CalendarSubscription
+        fields = [
+            "id",
+            "member",
+            "display_name",
+            "ical_url",
+            "color",
+            "refresh_minutes",
+            "last_fetched_at",
+            "last_etag",
+            "enabled",
+            "imported_event_count",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "member",
+            "last_fetched_at",
+            "last_etag",
+            "imported_event_count",
+            "created_at",
+        ]
+
+    def get_imported_event_count(self, obj: CalendarSubscription) -> int:
+        return obj.imported_events.count()
 
 
 class IcsImportPreviewSerializer(serializers.Serializer):

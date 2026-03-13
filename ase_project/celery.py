@@ -15,6 +15,21 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # Automatically discover tasks defined in tasks.py inside every INSTALLED_APP.
 app.autodiscover_tasks()
 
+# ---------------------------------------------------------------------------
+# Celery beat periodic tasks
+# ---------------------------------------------------------------------------
+
+app.conf.beat_schedule = {
+    "refresh-ical-subscriptions": {
+        "task": "calendars.tasks.refresh_ical_subscriptions",
+        "schedule": 300.0,  # every 5 minutes
+    },
+    "sync-google-calendars": {
+        "task": "calendars.tasks.sync_google_calendars",
+        "schedule": 300.0,  # every 5 minutes
+    },
+}
+
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):

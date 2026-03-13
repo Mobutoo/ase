@@ -7,6 +7,7 @@ from typing import Any
 from django.db import transaction
 from django.http import HttpResponse
 from rest_framework import permissions, status, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -14,9 +15,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .caldav.ical import events_from_ics, event_to_ics
-from .models import Calendar, Event, EventException
+from .models import Calendar, CalendarSubscription, Event, EventException
 from .serializers import (
     CalendarSerializer,
+    CalendarSubscriptionSerializer,
     EventSerializer,
     IcsImportConfirmSerializer,
     IcsImportPreviewSerializer,
@@ -76,8 +78,15 @@ class EventViewSet(viewsets.ModelViewSet):
         self._update_etag(event)
 
     def perform_update(self, serializer: EventSerializer) -> None:
+        if serializer.instance and serializer.instance.subscription_id is not None:
+            raise PermissionDenied("Subscribed events are read-only.")
         event = serializer.save()
         self._update_etag(event)
+
+    def perform_destroy(self, instance: Event) -> None:
+        if instance.subscription_id is not None:
+            raise PermissionDenied("Subscribed events are read-only.")
+        instance.delete()
 
     @staticmethod
     def _update_etag(event: Event) -> None:
@@ -188,6 +197,38 @@ class EventViewSet(viewsets.ModelViewSet):
         parts = [p for p in rrule.split(";") if not p.startswith("UNTIL=")]
         parts.append(f"UNTIL={until_stamp}")
         return ";".join(parts)
+
+
+class CalendarSubscriptionViewSet(viewsets.ModelViewSet):
+    """CRUD for iCal URL subscriptions.
+
+    Each subscription points to an external .ics feed that is periodically
+    fetched by a Celery beat task.  Imported events appear as read-only
+    background events on the member's calendar.
+    """
+
+    serializer_class = CalendarSubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return CalendarSubscription.objects.filter(
+            member__user=self.request.user,
+        ).order_by("display_name")
+
+    def perform_create(self, serializer: CalendarSubscriptionSerializer) -> None:
+        from circles.models import CircleMember
+
+        member = CircleMember.objects.get(user=self.request.user)
+        serializer.save(member=member)
+
+    @action(detail=True, methods=["post"], url_path="refresh")
+    def refresh(self, request: Request, pk: Any = None) -> Response:
+        """Trigger an immediate refresh of this subscription."""
+        subscription = self.get_object()
+        from .tasks import refresh_single_subscription
+
+        refresh_single_subscription.delay(subscription.pk)
+        return Response({"detail": "Refresh queued."}, status=status.HTTP_202_ACCEPTED)
 
 
 class IcsImportView(APIView):

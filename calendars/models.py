@@ -119,6 +119,28 @@ class Event(models.Model):
         related_name="validated_events",
     )
     validated_at = models.DateTimeField(null=True, blank=True)
+    # iCal subscription (read-only imported events)
+    subscription = models.ForeignKey(
+        "CalendarSubscription",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="imported_events",
+    )
+    ical_uid = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Original UID from external iCal feed (arbitrary string, not a UUID).",
+    )
+    # Google Calendar sync
+    google_event_id = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Google Calendar event ID (set when synced from/to Google).",
+    )
     # CalDAV sync fields
     etag = models.CharField(max_length=64, blank=True, default="")
     caldav_raw = models.TextField(blank=True, default="")
@@ -131,6 +153,7 @@ class Event(models.Model):
             models.Index(fields=["calendar", "start_at", "end_at"]),
             models.Index(fields=["parent_event"]),
             models.Index(fields=["linked_task"]),
+            models.Index(fields=["subscription", "ical_uid"]),
         ]
 
     def __str__(self) -> str:
@@ -165,6 +188,30 @@ class EventException(models.Model):
         )
 
 
+class CalendarSubscription(models.Model):
+    """An iCal URL subscription that syncs external events as read-only background events."""
+
+    member = models.ForeignKey(
+        "circles.CircleMember",
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+    )
+    display_name = models.CharField(max_length=255)
+    ical_url = models.URLField(max_length=1000)
+    color = models.CharField(max_length=7, default="#9CA3AF")
+    refresh_minutes = models.PositiveIntegerField(default=15)
+    last_fetched_at = models.DateTimeField(null=True, blank=True)
+    last_etag = models.CharField(max_length=128, blank=True, default="")
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["display_name"]
+
+    def __str__(self) -> str:
+        return f"{self.display_name} ({self.member})"
+
+
 class EventReminder(models.Model):
     event = models.ForeignKey(
         Event,
@@ -189,3 +236,55 @@ class EventReminder(models.Model):
         return (
             f"Reminder for {self.event} — {self.offset_minutes}min via {self.channel}"
         )
+
+
+SYNC_DIRECTION_CHOICES = [
+    ("both", "Bidirectional"),
+    ("push", "Ase to Google only"),
+    ("pull", "Google to Ase only"),
+]
+
+
+class GoogleCalendarSync(models.Model):
+    """Configuration for bidirectional Google Calendar sync via the gws CLI.
+
+    Each instance links one Ase calendar to one Google Calendar ID and tracks
+    incremental sync state (sync_token) for efficient delta polling.
+    """
+
+    member = models.ForeignKey(
+        "circles.CircleMember",
+        on_delete=models.CASCADE,
+        related_name="google_syncs",
+    )
+    ase_calendar = models.ForeignKey(
+        Calendar,
+        on_delete=models.CASCADE,
+        related_name="google_syncs",
+    )
+    google_calendar_id = models.CharField(
+        max_length=255,
+        help_text="Google Calendar ID (e.g. 'primary' or email address).",
+    )
+    google_account_email = models.EmailField(
+        help_text="Google account email for gws CLI auth.",
+    )
+    sync_token = models.CharField(max_length=500, blank=True, default="")
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    enabled = models.BooleanField(default=True)
+    sync_direction = models.CharField(
+        max_length=10,
+        choices=SYNC_DIRECTION_CHOICES,
+        default="both",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("member", "google_calendar_id")]
+
+    def __str__(self) -> str:
+        direction_arrow = {"both": "\u2194", "push": "\u2192", "pull": "\u2190"}.get(
+            self.sync_direction, "\u2194"
+        )
+        return f"{self.member} {direction_arrow} {self.google_calendar_id}"
