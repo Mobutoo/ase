@@ -55,10 +55,6 @@ class Migration(migrations.Migration):
             name='ical_uid',
             field=models.CharField(blank=True, default='', help_text='Original UID from external iCal feed (arbitrary string, not a UUID).', max_length=512),
         ),
-        migrations.AddIndex(
-            model_name='event',
-            index=models.Index(fields=['subscription', 'ical_uid'], name='calendars_e_subscri_f76f24_idx'),
-        ),
         migrations.AddField(
             model_name='googlecalendarsync',
             name='ase_calendar',
@@ -78,6 +74,10 @@ class Migration(migrations.Migration):
             model_name='event',
             name='subscription',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='imported_events', to='calendars.calendarsubscription'),
+        ),
+        migrations.AddIndex(
+            model_name='event',
+            index=models.Index(fields=['subscription', 'ical_uid'], name='calendars_e_subscri_f76f24_idx'),
         ),
         migrations.AlterUniqueTogether(
             name='googlecalendarsync',
