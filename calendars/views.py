@@ -15,11 +15,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .caldav.ical import events_from_ics, event_to_ics
-from .models import Calendar, CalendarSubscription, Event, EventException
+from .models import Calendar, CalendarSubscription, Event, EventException, GoogleCalendarSync
 from .serializers import (
     CalendarSerializer,
     CalendarSubscriptionSerializer,
     EventSerializer,
+    GoogleCalendarSyncSerializer,
     IcsImportConfirmSerializer,
     IcsImportPreviewSerializer,
 )
@@ -229,6 +230,46 @@ class CalendarSubscriptionViewSet(viewsets.ModelViewSet):
 
         refresh_single_subscription.delay(subscription.pk)
         return Response({"detail": "Refresh queued."}, status=status.HTTP_202_ACCEPTED)
+
+
+class GoogleCalendarSyncViewSet(viewsets.ModelViewSet):
+    """CRUD for Google Calendar sync configurations.
+
+    Scoped to the authenticated user's circle memberships.  Provides a
+    ``sync-now`` custom action to trigger an immediate sync cycle.
+    """
+
+    serializer_class = GoogleCalendarSyncSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return GoogleCalendarSync.objects.filter(
+            member__user=self.request.user,
+        ).select_related("ase_calendar", "member").order_by("-created_at")
+
+    def perform_create(self, serializer: GoogleCalendarSyncSerializer) -> None:
+        from circles.models import CircleMember
+
+        member = CircleMember.objects.get(user=self.request.user)
+        serializer.save(member=member)
+
+    @action(detail=True, methods=["post"], url_path="sync-now")
+    def sync_now(self, request: Request, pk: Any = None) -> Response:
+        """Trigger an immediate sync for this configuration."""
+        sync_config = self.get_object()
+        if not sync_config.enabled:
+            return Response(
+                {"detail": "Sync configuration is disabled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from .tasks import sync_google_calendars_single
+
+        sync_google_calendars_single.delay(sync_config.pk)
+        return Response(
+            {"detail": "Google Calendar sync queued."},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class IcsImportView(APIView):

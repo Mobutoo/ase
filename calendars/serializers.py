@@ -216,3 +216,33 @@ class IcsImportConfirmSerializer(serializers.Serializer):
     ics_payload = serializers.CharField(
         help_text="Raw iCalendar data (previously parsed in the preview step).",
     )
+
+
+class GoogleCalendarSyncSerializer(serializers.ModelSerializer):
+    """Serializer for Google Calendar sync configurations.
+
+    ``member`` is read-only and automatically set from the authenticated user.
+    ``sync_token`` and ``last_synced_at`` are read-only sync-state fields.
+    """
+
+    class Meta:
+        model = GoogleCalendarSync
+        fields = [
+            "id",
+            "member",
+            "ase_calendar",
+            "google_calendar_id",
+            "google_account_email",
+            "sync_token",
+            "last_synced_at",
+            "enabled",
+            "sync_direction",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "member",
+            "sync_token",
+            "last_synced_at",
+            "created_at",
+        ]
