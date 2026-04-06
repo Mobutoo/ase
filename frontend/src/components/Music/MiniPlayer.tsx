@@ -55,6 +55,7 @@ export function MiniPlayer({ leftOffset = 0, dimmed = false }: MiniPlayerProps) 
       <button
         onClick={handlePlayPause}
         disabled={!currentTrack}
+        aria-label={isPlaying ? "Pause" : "Play"}
         className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed ${
           isPlaying
             ? "bg-ase-gold/15 text-ase-gold border border-ase-gold/25 shadow-glow"

@@ -133,6 +133,7 @@ export function AICopilotPanel() {
             </div>
             <button
               onClick={clearError}
+              aria-label="Dismiss error"
               className="text-red-400/60 hover:text-red-400 transition-colors duration-200"
             >
               <X className="w-4 h-4" />

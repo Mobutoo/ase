@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -25,6 +25,29 @@ import { EventCreateModal } from "../components/calendar/EventCreateModal";
 import { RecurringEditDialog } from "../components/calendar/RecurringEditDialog";
 import type { RecurringEditScope } from "../components/calendar/RecurringEditDialog";
 import { ConflictDialog } from "../components/calendar/ConflictDialog";
+
+// ---------------------------------------------------------------------------
+// Mobile detection (< 768px)
+// ---------------------------------------------------------------------------
+
+const mobileQuery =
+  typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+
+function subscribeMobile(cb: () => void) {
+  mobileQuery?.addEventListener("change", cb);
+  return () => mobileQuery?.removeEventListener("change", cb);
+}
+
+function getSnapshotMobile() {
+  return mobileQuery?.matches ?? false;
+}
+
+function useIsMobile() {
+  return useSyncExternalStore(subscribeMobile, getSnapshotMobile, () => false);
+}
+
+/** Views available on mobile (week/month are too cramped) */
+const MOBILE_VIEWS: CalendarView[] = ["day", "agenda"];
 
 // ---------------------------------------------------------------------------
 // View toggle config
@@ -175,6 +198,19 @@ export function CalendarPage() {
   } = useCalendarStore();
 
   const { members, currentCircle, fetchCircles, fetchMembers } = useCircleStore();
+  const isMobile = useIsMobile();
+
+  // Auto-switch to day view when viewport shrinks below mobile breakpoint
+  useEffect(() => {
+    if (isMobile && !MOBILE_VIEWS.includes(currentView)) {
+      setView("day");
+    }
+  }, [isMobile, currentView, setView]);
+
+  // On mobile, only show day/agenda options
+  const viewOptions = isMobile
+    ? VIEW_OPTIONS.filter((v) => MOBILE_VIEWS.includes(v.value))
+    : VIEW_OPTIONS;
 
   // Modals state
   const [createOpen, setCreateOpen] = useState(false);
@@ -283,9 +319,9 @@ export function CalendarPage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-ase-bg">
       {/* ── Top bar ──────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 px-5 pt-5 pb-3 border-b border-ase-border bg-ase-bg">
+      <div className="flex-shrink-0 px-3 sm:px-5 pt-4 sm:pt-5 pb-3 border-b border-ase-border bg-ase-bg">
         {/* Title row */}
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3">
           <div className="w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center flex-shrink-0">
             <CalendarDays className="w-4 h-4 text-ase-gold" />
           </div>
@@ -298,7 +334,7 @@ export function CalendarPage() {
 
           {/* View toggle */}
           <div className="flex gap-0.5 p-0.5 rounded-lg bg-ase-surface border border-ase-border">
-            {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
+            {viewOptions.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
                 type="button"
@@ -323,6 +359,7 @@ export function CalendarPage() {
           <button
             type="button"
             onClick={() => navigateDate(navigate(selectedDate, currentView, -1))}
+            aria-label="Previous period"
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-ase-border text-ase-muted hover:text-white hover:border-ase-border-2 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -344,6 +381,7 @@ export function CalendarPage() {
           <button
             type="button"
             onClick={() => navigateDate(navigate(selectedDate, currentView, 1))}
+            aria-label="Next period"
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-ase-border text-ase-muted hover:text-white hover:border-ase-border-2 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
@@ -364,7 +402,7 @@ export function CalendarPage() {
                   ? "border-ase-gold/40 text-ase-gold bg-ase-gold/10"
                   : "border-ase-border hover:text-white hover:border-ase-border-2",
               ].join(" ")}
-              title="Multi-member view"
+              aria-label="Multi-member view"
             >
               <Users className="w-4 h-4" />
             </button>
@@ -381,7 +419,7 @@ export function CalendarPage() {
                   ? "border-ase-gold/40 text-ase-gold bg-ase-gold/10"
                   : "border-ase-border hover:text-white hover:border-ase-border-2",
               ].join(" ")}
-              title="Filter by member"
+              aria-label="Filter by member"
             >
               <Filter className="w-4 h-4" />
             </button>
@@ -405,8 +443,8 @@ export function CalendarPage() {
 
       {/* ── Content area ─────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Member filter sidebar */}
-        {filterOpen && members.length > 0 && (
+        {/* Member filter sidebar — hidden on mobile */}
+        {filterOpen && members.length > 0 && !isMobile && (
           <div className="flex-shrink-0 w-44 border-r border-ase-border bg-ase-surface overflow-y-auto p-3">
             <p className="text-[10px] font-semibold text-ase-subtle uppercase tracking-wider mb-2">
               Filter by member
@@ -496,10 +534,11 @@ export function CalendarPage() {
       <button
         type="button"
         onClick={() => setCreateOpen(true)}
-        className="fixed bottom-20 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl bg-ase-gold text-black font-semibold text-sm shadow-glow-lg hover:bg-ase-gold/90 active:scale-95 transition-all duration-150"
+        aria-label="New event"
+        className="fixed bottom-20 right-4 sm:right-6 z-50 flex items-center gap-2 px-3 sm:px-4 py-3 rounded-2xl bg-ase-gold text-black font-semibold text-sm shadow-glow-lg hover:bg-ase-gold/90 active:scale-95 transition-all duration-150"
       >
         <CalendarDays className="w-4 h-4" />
-        New event
+        <span className="hidden sm:inline">New event</span>
       </button>
 
       {/* ── Modals ────────────────────────────────────────────────── */}

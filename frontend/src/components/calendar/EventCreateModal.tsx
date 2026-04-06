@@ -143,6 +143,7 @@ export function EventCreateModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
             className="w-7 h-7 flex items-center justify-center rounded-lg text-ase-subtle hover:text-white hover:bg-ase-surface-2 transition-colors"
           >
             <X className="w-4 h-4" />

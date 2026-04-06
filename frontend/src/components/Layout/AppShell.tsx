@@ -111,6 +111,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#09090b] flex">
+      {/* Skip to content */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#f59e0b] focus:text-black focus:text-sm focus:font-medium"
+      >
+        {t("a11y.skipToContent", "Skip to content")}
+      </a>
+
       {/* Sidebar */}
       <nav
         className={[
@@ -152,7 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => setCollapsed(!collapsed)}
-            title={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+            aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200 flex-shrink-0"
           >
             {collapsed ? (
@@ -224,7 +232,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto pb-16">{children}</main>
+      <main id="main-content" className="flex-1 overflow-auto pb-16">{children}</main>
 
       {/* Global music player — persists across all pages */}
       <YouTubeEmbed />
