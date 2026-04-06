@@ -9,5 +9,4 @@ class AgentsConfig(AppConfig):
     verbose_name = "Agents"
 
     def ready(self) -> None:
-        # Import signal handlers if any are defined in the future
-        pass
+        import agents.signals  # noqa: F401 — register signal handlers
