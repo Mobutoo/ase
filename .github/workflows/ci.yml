@@ -20,7 +20,7 @@ jobs:
           POSTGRES_DB: ase
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U ase'
+          --health-cmd "pg_isready -U ase"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       DB_PASSWORD: ase-test-only
