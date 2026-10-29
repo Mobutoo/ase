@@ -1,45 +1,29 @@
 import { create } from "zustand";
-import type {
-  FlowMode,
-  TimerPhase,
-  TimerStatus,
-  WorkerMessage,
-} from "../types";
+import type { FlowMode, TimerPhase, TimerStatus, WorkerMessage } from "../types";
 import { MODE_DEFAULTS } from "../types";
 import { sessions } from "../api/client";
 import { playStartSound, playCompleteSound, playBreakOverSound } from "./useSound";
 
 interface TimerState {
-  // Timer core
   mode: FlowMode;
   phase: TimerPhase;
   status: TimerStatus;
   remainingMs: number;
   elapsedMs: number;
   totalDurationMs: number;
-
-  // Pomodoro cycle counter (resets each session group)
   pomodoroCount: number;
-
-  // Active session ID from backend
   activeSessionId: number | null;
-
-  // Energy
   energyBefore: number | null;
-
-  // Worker ref (not serialized)
   _worker: Worker | null;
-
-  // Actions
+  _workerRunId: number;
+  _pendingSession: Promise<number | null> | null;
   setMode: (mode: FlowMode) => void;
   start: (energyBefore?: number) => Promise<void>;
   pause: () => void;
   resume: () => void;
   stop: () => Promise<void>;
   complete: (energyAfter?: number, notes?: string) => Promise<void>;
-
-  // Internal
-  _onWorkerMessage: (msg: WorkerMessage) => void;
+  _onWorkerMessage: (msg: WorkerMessage & { runId?: number }) => void;
   _initWorker: () => void;
   _startBreak: () => void;
 }
@@ -49,94 +33,72 @@ function getDurationMs(mode: FlowMode): number {
 }
 
 function getLongBreakInterval(mode: FlowMode): number {
-  if (mode === "kids") return 3;
-  return 4;
+  return mode === "kids" ? 3 : 4;
 }
 
-function getBreakMs(mode: FlowMode, pomodoroCount: number): number {
-  const defaults = MODE_DEFAULTS[mode];
-  const interval = getLongBreakInterval(mode);
-  if (
-    (mode === "pomodoro" || mode === "kids") &&
-    pomodoroCount > 0 &&
-    pomodoroCount % interval === 0
-  ) {
-    return defaults.longBreak * 60 * 1000;
-  }
-  return defaults.shortBreak * 60 * 1000;
+// Optional browser capabilities must never interrupt timer transitions.
+function playSound(play: () => void) {
+  try { play(); } catch { /* Web Audio may be unavailable or blocked. */ }
+}
+
+function notify(title: string, body: string) {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try { new Notification(title, { body, icon: "/favicon.ico" }); }
+  catch { /* Some browsers require service-worker notifications. */ }
 }
 
 export const useTimerStore = create<TimerState>((set, get) => ({
   mode: "pomodoro",
   phase: "idle",
   status: "idle",
-  remainingMs: MODE_DEFAULTS.pomodoro.work * 60 * 1000,
+  remainingMs: getDurationMs("pomodoro"),
   elapsedMs: 0,
-  totalDurationMs: MODE_DEFAULTS.pomodoro.work * 60 * 1000,
+  totalDurationMs: getDurationMs("pomodoro"),
   pomodoroCount: 0,
   activeSessionId: null,
   energyBefore: null,
   _worker: null,
+  _workerRunId: 0,
+  _pendingSession: null,
 
   setMode: (mode) => {
-    const state = get();
-    if (state.status !== "idle") return; // Can't change mode while running
+    if (get().status !== "idle") return;
     const durationMs = getDurationMs(mode);
-    set({
-      mode,
-      remainingMs: durationMs,
-      totalDurationMs: durationMs,
-      pomodoroCount: 0,
-    });
+    set({ mode, remainingMs: durationMs, elapsedMs: 0, totalDurationMs: durationMs, pomodoroCount: 0 });
   },
 
   _initWorker: () => {
-    const state = get();
-    if (state._worker) return;
-
-    const worker = new Worker(
-      new URL("../workers/timer.worker.ts", import.meta.url),
-      { type: "module" }
-    );
-    worker.onmessage = (e: MessageEvent<WorkerMessage>) => {
+    if (get()._worker) return;
+    const worker = new Worker(new URL("../workers/timer.worker.ts", import.meta.url), { type: "module" });
+    worker.onmessage = (e: MessageEvent<WorkerMessage & { runId?: number }>) => {
       get()._onWorkerMessage(e.data);
     };
     set({ _worker: worker });
   },
 
   _onWorkerMessage: (msg) => {
+    const state = get();
+    if (msg.runId !== undefined && msg.runId !== state._workerRunId) return;
+    if (state.status !== "running") return;
     switch (msg.type) {
       case "tick":
         set({ remainingMs: msg.remainingMs, elapsedMs: msg.elapsedMs });
         break;
-      case "complete": {
-        const state = get();
+      case "complete":
         if (state.phase === "focus") {
-          playCompleteSound();
-          // Focus period done — auto-complete session + start break
-          state.complete().then(() => state._startBreak());
-        } else {
-          playBreakOverSound();
-          // Break done — return to idle
+          void state.complete();
+        } else if (state.phase !== "idle") {
           set({
-            phase: "idle",
-            status: "idle",
-            remainingMs: getDurationMs(state.mode),
-            elapsedMs: 0,
-            totalDurationMs: getDurationMs(state.mode),
+            phase: "idle", status: "idle", remainingMs: getDurationMs(state.mode),
+            elapsedMs: 0, totalDurationMs: getDurationMs(state.mode),
           });
-          // Notification
-          if (Notification.permission === "granted") {
-            new Notification("Break over!", {
-              body: "Ready for another focus session?",
-              icon: "/favicon.ico",
-            });
-          }
+          playSound(playBreakOverSound);
+          notify("Break over!", "Ready for another focus session?");
         }
         break;
-      }
+      // Stop acknowledgements can arrive after a new timer has already started.
+      // State transitions are owned by stop()/complete(), never by acknowledgements.
       case "stopped":
-        set({ status: "idle", phase: "idle" });
         break;
     }
   },
@@ -144,147 +106,93 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   _startBreak: () => {
     const state = get();
     const { mode, pomodoroCount, _worker } = state;
-
-    if (mode === "free_flow") {
-      // Free flow: break = 20% of elapsed work time
-      const breakMs = Math.round(state.elapsedMs * 0.2);
-      if (breakMs < 60000) {
-        // Less than 1 min — skip break
-        set({
-          phase: "idle",
-          status: "idle",
-          remainingMs: 0,
-          elapsedMs: 0,
-          totalDurationMs: 0,
-        });
-        return;
-      }
-      set({
-        phase: "short_break",
-        status: "running",
-        remainingMs: breakMs,
-        elapsedMs: 0,
-        totalDurationMs: breakMs,
-      });
-      _worker?.postMessage({ type: "start", durationMs: breakMs });
+    const isLongBreak = (mode === "pomodoro" || mode === "kids") &&
+      pomodoroCount > 0 && pomodoroCount % getLongBreakInterval(mode) === 0;
+    const defaults = MODE_DEFAULTS[mode];
+    const breakMs = mode === "free_flow"
+      ? Math.round(state.elapsedMs * 0.2)
+      : (isLongBreak ? defaults.longBreak : defaults.shortBreak) * 60 * 1000;
+    if (breakMs < 60000) {
+      set({ phase: "idle", status: "idle", remainingMs: getDurationMs(mode), elapsedMs: 0, totalDurationMs: getDurationMs(mode) });
       return;
     }
-
-    const interval = getLongBreakInterval(mode);
-    const isLongBreak =
-      (mode === "pomodoro" || mode === "kids") &&
-      pomodoroCount > 0 &&
-      pomodoroCount % interval === 0;
-    const breakMs = getBreakMs(mode, pomodoroCount);
-    const breakPhase = isLongBreak ? "long_break" : "short_break";
-
+    const runId = state._workerRunId + 1;
     set({
-      phase: breakPhase,
-      status: "running",
-      remainingMs: breakMs,
-      elapsedMs: 0,
-      totalDurationMs: breakMs,
+      phase: isLongBreak ? "long_break" : "short_break", status: "running",
+      remainingMs: breakMs, elapsedMs: 0, totalDurationMs: breakMs, _workerRunId: runId,
     });
-    _worker?.postMessage({ type: "start", durationMs: breakMs });
-
-    // Notification
-    if (Notification.permission === "granted") {
-      new Notification("Focus complete!", {
-        body: `Take a ${Math.round(breakMs / 60000)} min break.`,
-        icon: "/favicon.ico",
-      });
-    }
+    _worker?.postMessage({ type: "start", durationMs: breakMs, runId });
+    notify("Focus complete!", `Take a ${Math.round(breakMs / 60000)} min break.`);
   },
 
   start: async (energyBefore) => {
-    const state = get();
-    state._initWorker();
-
-    const { mode } = get();
+    if (get().status !== "idle") return;
+    get()._initWorker();
+    const { mode, _worker, _workerRunId } = get();
     const durationMs = getDurationMs(mode);
-
-    // Create session on backend
-    let sessionId: number | null = null;
-    try {
-      const session = await sessions.create({
-        mode,
-        planned_duration: Math.round(durationMs / 60000),
-        energy_before: energyBefore ?? undefined,
-      });
-      sessionId = session.id;
-    } catch {
-      // Offline mode — continue without backend session
-    }
-
-    playStartSound();
-
+    const runId = _workerRunId + 1;
+    // Start locally immediately; slow API requests must not block or duplicate a timer.
     set({
-      phase: "focus",
-      status: "running",
-      remainingMs: durationMs,
-      elapsedMs: 0,
-      totalDurationMs: durationMs,
-      activeSessionId: sessionId,
-      energyBefore: energyBefore ?? null,
+      phase: "focus", status: "running", remainingMs: durationMs, elapsedMs: 0,
+      totalDurationMs: durationMs, activeSessionId: null, energyBefore: energyBefore ?? null,
+      _workerRunId: runId,
     });
-
-    get()._worker?.postMessage({ type: "start", durationMs });
+    const pendingSession = sessions.create({
+      mode, plannedDuration: Math.round(durationMs / 60000), energyBefore: energyBefore ?? undefined,
+    }).then((session) => session.id).catch(() => null);
+    set({ _pendingSession: pendingSession });
+    _worker?.postMessage({ type: "start", durationMs, runId });
+    playSound(playStartSound);
+    const sessionId = await pendingSession;
+    if (get()._workerRunId === runId && get().phase === "focus") {
+      set({ activeSessionId: sessionId });
+    }
   },
 
   pause: () => {
+    if (get().status !== "running") return;
     get()._worker?.postMessage({ type: "pause" });
     set({ status: "paused" });
   },
 
   resume: () => {
+    if (get().status !== "paused") return;
     get()._worker?.postMessage({ type: "resume" });
     set({ status: "running" });
   },
 
   stop: async () => {
     const state = get();
+    if (state.status === "idle") return;
     state._worker?.postMessage({ type: "stop" });
-
-    // Cancel session on backend
-    if (state.activeSessionId) {
-      try {
-        await sessions.cancel(state.activeSessionId);
-      } catch {
-        // Ignore — session might not exist
-      }
-    }
-
     set({
-      phase: "idle",
-      status: "idle",
-      remainingMs: getDurationMs(state.mode),
-      elapsedMs: 0,
-      totalDurationMs: getDurationMs(state.mode),
-      activeSessionId: null,
-      energyBefore: null,
+      phase: "idle", status: "idle", remainingMs: getDurationMs(state.mode), elapsedMs: 0,
+      totalDurationMs: getDurationMs(state.mode), activeSessionId: null, energyBefore: null,
+      _pendingSession: null, _workerRunId: state._workerRunId + 1,
     });
+    const sessionId = state.activeSessionId ?? await state._pendingSession;
+    if (sessionId !== null) {
+      try { await sessions.cancel(sessionId); } catch { /* Continue locally when offline. */ }
+    }
   },
 
   complete: async (energyAfter, notes) => {
     const state = get();
+    if (state.phase !== "focus" || state.status === "idle") return;
     state._worker?.postMessage({ type: "stop" });
-
-    // Complete session on backend
-    if (state.activeSessionId) {
-      try {
-        await sessions.complete(state.activeSessionId, {
-          energy_after: energyAfter,
-          notes,
-        });
-      } catch {
-        // Ignore
-      }
+    set({
+      activeSessionId: null, energyBefore: null, _pendingSession: null,
+      pomodoroCount: state.pomodoroCount + 1,
+      _workerRunId: state._workerRunId + 1,
+    });
+    // Enter the break synchronously so stale messages or a slow request cannot
+    // complete the same focus twice or reset a newer session.
+    get()._startBreak();
+    playSound(playCompleteSound);
+    const sessionId = state.activeSessionId ?? await state._pendingSession;
+    if (sessionId !== null) {
+      try { await sessions.complete(sessionId, { energyAfter: energyAfter, notes }); }
+      catch { /* Continue locally when offline. */ }
     }
-
-    set((prev) => ({
-      activeSessionId: null,
-      energyBefore: null,
-      pomodoroCount: prev.pomodoroCount + 1,
-    }));
   },
 }));

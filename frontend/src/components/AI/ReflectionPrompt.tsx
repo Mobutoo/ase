@@ -62,7 +62,7 @@ export function ReflectionPrompt() {
 
   // Pick the most recent reflection_prompt suggestion
   const reflectionSuggestion = suggestions
-    .filter((s) => s.suggestion_type === "reflection_prompt")
+    .filter((s) => s.suggestionType === "reflection_prompt")
     [0] ?? null;
 
   const reflectionContent = reflectionSuggestion

@@ -5,40 +5,23 @@ import type { Circle, CircleMember } from "../types/circle";
 // API helpers
 // ---------------------------------------------------------------------------
 
-function getCsrfToken(): string {
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : "";
-}
+import { request as apiRequest } from "../api/request";
 
-async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CSRFToken": getCsrfToken(),
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`Circle API ${res.status}:`, body);
-    if (res.status === 401 || res.status === 403) throw new Error("Please log in to continue");
-    if (res.status === 404) throw new Error("Resource not found");
-    if (res.status >= 500) throw new Error("Server error — please try again later");
-    throw new Error(`Request failed (${res.status})`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
 
 // ---------------------------------------------------------------------------
 // Invite payload
 // ---------------------------------------------------------------------------
 
 export interface InviteMemberPayload {
-  email: string;
   role: string;
-  displayName?: string;
-  membershipType?: 'local' | 'federated';
-  federatedServer?: string;
+  displayName: string;
+}
+
+export interface CircleInvitation {
+  inviteToken: string;
+  circleId: number;
+  circleName: string;
+  expiresInSeconds: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +39,7 @@ interface CircleState {
   fetchCircles: () => Promise<void>;
   setCurrentCircle: (circle: Circle) => void;
   fetchMembers: (circleId: string) => Promise<void>;
-  inviteMember: (circleId: string, payload: InviteMemberPayload) => Promise<void>;
+  inviteMember: (circleId: string, payload: InviteMemberPayload) => Promise<CircleInvitation | null>;
   updateRole: (memberId: string, role: string) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
   updateCircle: (circleId: string, payload: Partial<Circle>) => Promise<void>;
@@ -113,22 +96,26 @@ export const useCircleStore = create<CircleState>((set, get) => ({
   inviteMember: async (circleId, payload) => {
     set({ loading: true, error: null });
     try {
-      const newMember = await apiRequest<CircleMember>(
-        `/api/circles/${circleId}/members/invite/`,
+      const invitation = await apiRequest<CircleInvitation>(
+        `/api/circles/${circleId}/invite/`,
         { method: "POST", body: JSON.stringify(payload) }
       );
-      set((prev) => ({ members: [...prev.members, newMember], loading: false }));
+      set({ loading: false });
+      return invitation;
     } catch (err) {
       set({
         loading: false,
-        error: err instanceof Error ? err.message : "Failed to send invitation",
+        error: err instanceof Error ? err.message : "Failed to create invitation",
       });
+      return null;
     }
   },
 
   updateRole: async (memberId, role) => {
     try {
-      const updated = await apiRequest<CircleMember>(`/api/circles/members/${memberId}/`, {
+      const circleId = get().currentCircle?.id;
+      if (circleId == null) throw new Error("Select a circle first");
+      const updated = await apiRequest<CircleMember>(`/api/circles/${circleId}/members/${memberId}/role/`, {
         method: "PATCH",
         body: JSON.stringify({ role }),
       });
@@ -142,7 +129,9 @@ export const useCircleStore = create<CircleState>((set, get) => ({
 
   removeMember: async (memberId) => {
     try {
-      await apiRequest<void>(`/api/circles/members/${memberId}/`, { method: "DELETE" });
+      const circleId = get().currentCircle?.id;
+      if (circleId == null) throw new Error("Select a circle first");
+      await apiRequest<void>(`/api/circles/${circleId}/members/${memberId}/`, { method: "DELETE" });
       set((prev) => ({ members: prev.members.filter((m) => m.id !== memberId) }));
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Failed to remove member" });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   CalendarDays,
   Clock,
@@ -77,8 +78,9 @@ function FieldLabel({ label, icon: Icon }: FieldLabelProps) {
 interface EventCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (payload: Partial<CalendarEvent>) => Promise<void>;
+  onSave: (payload: Partial<CalendarEvent>) => Promise<boolean>;
   initialDate?: string; // YYYY-MM-DD
+  initialTitle?: string;
   availableMembers?: CircleMember[];
   isSaving?: boolean;
 }
@@ -92,12 +94,14 @@ export function EventCreateModal({
   onClose,
   onSave,
   initialDate,
+  initialTitle = "",
   availableMembers = [],
   isSaving = false,
 }: EventCreateModalProps) {
   const [form, setForm] = useState<Partial<CalendarEvent>>(() =>
-    buildInitialForm(initialDate)
+    ({ ...buildInitialForm(initialDate), title: initialTitle })
   );
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -107,14 +111,22 @@ export function EventCreateModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title?.trim()) return;
-    await onSave(form);
-    setForm(buildInitialForm(initialDate));
-    onClose();
-  };
-
-  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
+    if (!form.title?.trim() || isSaving) return;
+    setError(null);
+    if (!form.startAt || !form.endAt || Date.parse(form.endAt) <= Date.parse(form.startAt)) {
+      setError("End time must be after start time.");
+      return;
+    }
+    try {
+      if (await onSave({ ...form, title: form.title.trim() })) {
+        setForm(buildInitialForm(initialDate));
+        onClose();
+      } else {
+        setError("Event has not been saved. Check the details and try again.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save event.");
+    }
   };
 
   const toggleMember = (member: CircleMember) => {
@@ -127,18 +139,17 @@ export function EventCreateModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={handleBackdrop}
-    >
-      <div className="bg-ase-surface border border-ase-border rounded-2xl w-full max-w-lg shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto">
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open && !isSaving) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+      <Dialog.Content aria-describedby={undefined} className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-ase-surface border border-ase-border rounded-2xl w-[calc(100%-2rem)] max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-ase-border">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center">
               <CalendarDays className="w-4 h-4 text-ase-gold" />
             </div>
-            <h2 className="text-sm font-semibold text-white">New event</h2>
+            <Dialog.Title className="text-sm font-semibold text-white">New event</Dialog.Title>
           </div>
           <button
             type="button"
@@ -152,6 +163,7 @@ export function EventCreateModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-4">
+          {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
           {/* Title */}
           <div>
             <label className="text-xs font-medium text-ase-subtle block mb-1">
@@ -159,6 +171,7 @@ export function EventCreateModal({
             </label>
             <input
               type="text"
+              aria-label="Title"
               value={form.title ?? ""}
               onChange={(e) => patch("title", e.target.value)}
               placeholder="What's happening?"
@@ -176,6 +189,7 @@ export function EventCreateModal({
                 <button
                   type="button"
                   role="switch"
+                  aria-label="All day"
                   aria-checked={form.allDay}
                   onClick={() => patch("allDay", !form.allDay)}
                   className={[
@@ -197,12 +211,16 @@ export function EventCreateModal({
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="date"
+                  aria-label="Start date"
+                  required
                   value={form.startAt ? form.startAt.slice(0, 10) : ""}
                   onChange={(e) => patch("startAt", e.target.value + "T00:00:00.000Z")}
                   className="h-9 w-full rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
                 />
                 <input
                   type="date"
+                  aria-label="End date"
+                  required
                   value={form.endAt ? form.endAt.slice(0, 10) : ""}
                   onChange={(e) => patch("endAt", e.target.value + "T23:59:59.000Z")}
                   className="h-9 w-full rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
@@ -212,14 +230,18 @@ export function EventCreateModal({
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="datetime-local"
+                  aria-label="Start time"
+                  required
                   value={form.startAt ? toLocalDatetime(form.startAt) : ""}
-                  onChange={(e) => patch("startAt", new Date(e.target.value).toISOString())}
+                  onChange={(e) => patch("startAt", e.target.value ? new Date(e.target.value).toISOString() : "")}
                   className="h-9 w-full rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
                 />
                 <input
                   type="datetime-local"
+                  aria-label="End time"
+                  required
                   value={form.endAt ? toLocalDatetime(form.endAt) : ""}
-                  onChange={(e) => patch("endAt", new Date(e.target.value).toISOString())}
+                  onChange={(e) => patch("endAt", e.target.value ? new Date(e.target.value).toISOString() : "")}
                   className="h-9 w-full rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
                 />
               </div>
@@ -232,6 +254,7 @@ export function EventCreateModal({
             <input
               type="text"
               value={form.location ?? ""}
+              aria-label="Location"
               onChange={(e) => patch("location", e.target.value)}
               placeholder="Add location (optional)"
               className="w-full h-9 rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white placeholder:text-ase-subtle focus:outline-none focus:border-ase-gold/50"
@@ -244,6 +267,7 @@ export function EventCreateModal({
               <FieldLabel label="Recurrence" icon={Repeat} />
               <select
                 value={form.recurrenceRule ?? ""}
+                aria-label="Recurrence"
                 onChange={(e) => patch("recurrenceRule", e.target.value || undefined)}
                 className="w-full h-9 rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
               >
@@ -259,6 +283,7 @@ export function EventCreateModal({
               <FieldLabel label="Visibility" icon={Eye} />
               <select
                 value={form.visibility ?? "family"}
+                aria-label="Visibility"
                 onChange={(e) => patch("visibility", e.target.value as CalendarEvent["visibility"])}
                 className="w-full h-9 rounded-lg border border-ase-border bg-ase-bg px-3 text-sm text-white focus:outline-none focus:border-ase-gold/50"
               >
@@ -281,6 +306,7 @@ export function EventCreateModal({
                       key={member.id}
                       type="button"
                       onClick={() => toggleMember(member)}
+                      aria-pressed={selected}
                       className={[
                         "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border transition-all duration-150",
                         selected
@@ -307,6 +333,7 @@ export function EventCreateModal({
             <FieldLabel label="Reminder" icon={Bell} />
             <select
               value={form.reminders?.[0]?.offsetMinutes ?? 15}
+              aria-label="Reminder"
               onChange={(e) =>
                 patch("reminders", [
                   { id: "r1", offsetMinutes: Number(e.target.value), channel: "push" },
@@ -329,6 +356,7 @@ export function EventCreateModal({
             <label className="text-xs font-medium text-ase-subtle block mb-1">Notes</label>
             <textarea
               value={form.description ?? ""}
+              aria-label="Notes"
               onChange={(e) => patch("description", e.target.value)}
               placeholder="Add notes or description..."
               rows={2}
@@ -360,7 +388,8 @@ export function EventCreateModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Sparkles, Plus, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { CalendarDays, Plus, Loader2 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -12,15 +12,8 @@ interface QuickAddBarProps {
 }
 
 // ---------------------------------------------------------------------------
-// NLP hint examples shown in placeholder rotation
+// Event details are confirmed in the creation dialog.
 // ---------------------------------------------------------------------------
-
-const HINTS = [
-  'Try "Meeting with Alex tomorrow at 3pm"',
-  'Try "Dentist Friday at 10am, 1 hour"',
-  'Try "Team standup every weekday at 9"',
-  'Try "Pick up kids at 5pm, remind me 30min before"',
-];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -28,14 +21,7 @@ const HINTS = [
 
 export function QuickAddBar({ onSubmit, placeholder, isLoading = false }: QuickAddBarProps) {
   const [text, setText] = useState("");
-  const [hintIdx, setHintIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Rotate hints every 4 seconds
-  useEffect(() => {
-    const id = setInterval(() => setHintIdx((i) => (i + 1) % HINTS.length), 4000);
-    return () => clearInterval(id);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +43,7 @@ export function QuickAddBar({ onSubmit, placeholder, isLoading = false }: QuickA
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
       {/* AI spark icon */}
       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-ase-gold/10 border border-ase-gold/20 flex items-center justify-center">
-        <Sparkles className="w-4 h-4 text-ase-gold" />
+        <CalendarDays className="w-4 h-4 text-ase-gold" />
       </div>
 
       {/* Input */}
@@ -69,7 +55,8 @@ export function QuickAddBar({ onSubmit, placeholder, isLoading = false }: QuickA
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
-          placeholder={placeholder ?? HINTS[hintIdx]}
+          aria-label="New event title"
+          placeholder={placeholder ?? "Event title — choose dates in the next step"}
           className={[
             "w-full h-10 rounded-xl border bg-ase-surface px-4 text-sm text-white",
             "placeholder:text-ase-subtle transition-all duration-200",

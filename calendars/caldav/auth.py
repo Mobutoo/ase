@@ -4,7 +4,7 @@ from __future__ import annotations
 
 CalDAV clients (Thunderbird, Apple Calendar, DAVx5, ...) typically use
 HTTP Basic Auth.  This module provides a lightweight authenticator that
-validates credentials stored as Django user passwords so that no
+validates revocable application passwords (and existing local passwords) so that no
 session-cookie machinery is needed over WebDAV.
 
 Usage::
@@ -26,6 +26,8 @@ from typing import Callable
 
 from django.contrib.auth import authenticate, get_user_model
 from django.http import HttpRequest, HttpResponse
+from django.db.models import Q
+from django.utils import timezone
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -45,11 +47,13 @@ def parse_basic_auth(request: HttpRequest) -> tuple[str, str] | None:
     Returns ``None`` if the header is absent or malformed.
     """
     auth_header = request.META.get("HTTP_AUTHORIZATION", "")
-    if not auth_header.startswith("Basic "):
+    if len(auth_header) > 1024 or not auth_header.lower().startswith("basic "):
         return None
     try:
-        decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
-        username, _, password = decoded.partition(":")
+        decoded = base64.b64decode(auth_header[6:], validate=True).decode("utf-8")
+        username, separator, password = decoded.partition(":")
+        if not separator or not username or not password or len(username) > 150 or len(password) > 128:
+            return None
         return username, password
     except Exception:
         return None
@@ -64,6 +68,20 @@ def authenticate_caldav(request: HttpRequest) -> User | None:
     if credentials is None:
         return None
     username, password = credentials
+    from iam.models import AppSpecificPassword
+
+    user = User.objects.filter(username=username, is_active=True).first()
+    if user is None:
+        return None
+    now = timezone.now()
+    app_passwords = AppSpecificPassword.objects.filter(user=user).filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+    )
+    for app_password in app_passwords:
+        if app_password.check_password(password):
+            app_password.last_used_at = now
+            app_password.save(update_fields=["last_used_at"])
+            return user
     user = authenticate(request, username=username, password=password)
     if user is not None and user.is_active:
         return user

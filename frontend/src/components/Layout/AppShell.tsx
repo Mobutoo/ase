@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -34,6 +34,12 @@ const BOTTOM_NAV = [
 const USER_INITIALS = "A";
 const USER_NAME = "Admin";
 
+const narrowViewport = window.matchMedia("(max-width: 639px)");
+function subscribeViewport(onChange: () => void) {
+  narrowViewport.addEventListener("change", onChange);
+  return () => narrowViewport.removeEventListener("change", onChange);
+}
+
 function NavItem({
   path,
   labelKey,
@@ -53,6 +59,8 @@ function NavItem({
     <Link
       to={path}
       title={collapsed ? label : undefined}
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
       className={[
         "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg",
         "transition-all duration-200",
@@ -100,7 +108,9 @@ function NavItem({
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const [manuallyCollapsed, setCollapsed] = useState(false);
+  const isMobile = useSyncExternalStore(subscribeViewport, () => narrowViewport.matches, () => false);
+  const collapsed = manuallyCollapsed || isMobile;
 
   // Focus immersive mode: sidebar hides when timer is active on Focus page
   const timerPhase = useTimerStore((s) => s.phase);
@@ -121,6 +131,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <nav
+        aria-label={t("a11y.mainNavigation", "Main navigation")}
+        hidden={isImmersive}
         className={[
           "bg-[#09090b]",
           "border-r border-zinc-800/50",
@@ -131,7 +143,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           "overflow-hidden flex-shrink-0",
           isImmersive ? "opacity-0 pointer-events-none" : "opacity-100",
         ].join(" ")}
-        style={{ width: `${sidebarWidth}px` }}
+        style={{ width: `${sidebarWidth}px`, display: isImmersive ? "none" : undefined }}
       >
         {/* Logo + collapse toggle (top) */}
         <div className="h-16 flex items-center gap-2 px-3 border-b border-zinc-800/50 flex-shrink-0">
@@ -160,7 +172,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => setCollapsed(!collapsed)}
+            hidden={isMobile}
+            style={isMobile ? { display: "none" } : undefined}
             aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+            aria-expanded={!collapsed}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200 flex-shrink-0"
           >
             {collapsed ? (
@@ -232,7 +247,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main id="main-content" className="flex-1 overflow-auto pb-16">{children}</main>
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto pb-16">{children}</main>
 
       {/* Global music player — persists across all pages */}
       <YouTubeEmbed />

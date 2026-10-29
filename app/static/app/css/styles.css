@@ -153,6 +153,15 @@ li {
   background: var(--yellow-logo);
 }
 
+/* Keep the POST logout control visually consistent with navigation links. */
+.logout-button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 /* Navbar styles */
 .navbar-brand {
   margin: auto 0;

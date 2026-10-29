@@ -32,6 +32,7 @@ Limitations / TODO:
 
 import hashlib
 import logging
+import uuid
 from datetime import timezone
 from xml.etree import ElementTree as ET
 
@@ -318,6 +319,13 @@ class CalDavEventView(View):
     """Handles GET, PUT, DELETE on a single event resource."""
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if kwargs.get("username") != request.caldav_user.username:
+            return HttpResponse(status=403)
+        if kwargs.get("uid"):
+            try:
+                uuid.UUID(kwargs["uid"])
+            except ValueError:
+                return HttpResponse(status=404)
         method = request.method
         if method == "GET":
             return self.get(request, *args, **kwargs)
@@ -372,6 +380,14 @@ class CalDavEventView(View):
 
         ev_data = parsed_list[0]
         event_uid = ev_data.get("uid") or uid
+        try:
+            event_uid = uuid.UUID(str(event_uid))
+        except ValueError:
+            return HttpResponse("Event UID must be a UUID.", status=400)
+        if event_uid != uuid.UUID(uid):
+            return HttpResponse("Event UID must match its resource URL.", status=409)
+        if ev_data["end_at"] <= ev_data["start_at"]:
+            return HttpResponse("Event end must be after its start.", status=400)
 
         # ETag conditional headers (RFC 4791 / RFC 2616)
         if_match = request.META.get("HTTP_IF_MATCH", "").strip('"')
@@ -379,9 +395,11 @@ class CalDavEventView(View):
 
         try:
             event = Event.objects.get(uid=event_uid, calendar=calendar)
+            if event.subscription_id is not None:
+                return HttpResponse("Subscribed events are read-only.", status=403)
 
             # If-Match: update only if ETag matches (prevents lost updates)
-            if if_match and event.etag != if_match:
+            if if_match and if_match not in ("*", event.etag):
                 return HttpResponse(status=412)  # Precondition Failed
 
             # If-None-Match: * means "only create, don't overwrite"
@@ -397,8 +415,9 @@ class CalDavEventView(View):
             event.all_day = ev_data.get("all_day", event.all_day)
             event.recurrence_rule = ev_data.get("recurrence_rule", event.recurrence_rule)
             event.caldav_raw = raw
-            event.etag = _compute_etag(event)
             event.save()
+            event.etag = _compute_etag(event)
+            event.save(update_fields=["etag"])
             created = False
         except Event.DoesNotExist:
             # If-Match present but resource doesn't exist — fail
@@ -435,6 +454,11 @@ class CalDavEventView(View):
         except Event.DoesNotExist:
             return HttpResponse(status=404)
 
+        if event.subscription_id is not None:
+            return HttpResponse("Subscribed events are read-only.", status=403)
+        if_match = request.META.get("HTTP_IF_MATCH", "").strip('"')
+        if if_match and if_match not in ("*", event.etag):
+            return HttpResponse(status=412)
         event.delete()
         return HttpResponse(status=204)
 

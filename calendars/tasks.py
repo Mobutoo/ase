@@ -102,7 +102,7 @@ def refresh_ical_subscriptions() -> None:
         try:
             _refresh_single(sub)
         except Exception as exc:
-            logger.error("Failed to refresh subscription %s: %s", sub.pk, exc)
+            logger.error("Failed to refresh subscription %s (%s)", sub.pk, type(exc).__name__)
 
 
 @shared_task(name="calendars.tasks.refresh_single_subscription")
@@ -119,23 +119,18 @@ def refresh_single_subscription(subscription_pk: int) -> None:
     try:
         _refresh_single(sub)
     except Exception as exc:
-        logger.error("Failed to refresh subscription %s: %s", sub.pk, exc)
+        logger.error("Failed to refresh subscription %s (%s)", sub.pk, type(exc).__name__)
 
 
 def _refresh_single(sub) -> None:
     """Fetch the iCal feed and upsert events for a single subscription."""
-    import httpx
+    from calendars.subscription_fetch import fetch_subscription
     from django.utils import timezone
 
     from calendars.caldav.ical import events_from_ics
     from calendars.models import Calendar, Event
 
-    headers: dict[str, str] = {}
-    if sub.last_etag:
-        headers["If-None-Match"] = sub.last_etag
-
-    with httpx.Client(timeout=30.0) as client:
-        resp = client.get(str(sub.ical_url), headers=headers, follow_redirects=True)
+    resp = fetch_subscription(str(sub.ical_url), sub.last_etag)
 
     if resp.status_code == 304:
         sub.last_fetched_at = timezone.now()

@@ -1,23 +1,23 @@
 # Ase v3 "Circle Flow" — Human-centric flow engine
 # Core
-django==4.2.27
-django-allauth==0.57.2
-djangorestframework==3.15.2
+django==5.2.18
+django-allauth==65.21.0
+djangorestframework==3.18.3
 djangorestframework-camel-case==1.4.2
 dj-database-url==2.3.0
 gunicorn==22.0.0
 
 # ASGI server (Django Channels)
-daphne==4.1.2
+uvicorn[standard]==0.54.0
 
 # Database & Cache
 psycopg2-binary==2.9.10
 redis==5.0.0
 
 # Utils
-pillow==10.3.0
-pytz==2023.3
-requests==2.32.4
+pillow==13.0.0
+pytz==2026.5
+requests==2.34.2
 
 # Auth OIDC
 mozilla-django-oidc==4.0.1
@@ -38,5 +38,5 @@ celery==5.4.0
 sib-api-v3-sdk==7.6.0
 
 # Security
-cryptography==43.0.0
+cryptography==50.0.2
 bcrypt==4.2.0

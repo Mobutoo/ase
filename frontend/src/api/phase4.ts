@@ -15,42 +15,15 @@ import type {
 
 /**
  * Shape returned by GET /api/v1/leaderboard/rewards/
- * Backend returns { total_achievements, recent } — NOT an array of Reward.
+ * Backend returns { totalAchievements, recent } — NOT an array of Reward.
  */
 export interface RewardsResponse {
-  total_achievements: number;
+  totalAchievements: number;
   recent: Achievement[];
 }
 
-function getCsrfToken(): string {
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : "";
-}
+import { request } from "./request";
 
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CSRFToken": getCsrfToken(),
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`API Error ${res.status}:`, body);
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("Please log in to continue");
-    }
-    if (res.status === 404) {
-      throw new Error("Resource not found");
-    }
-    if (res.status >= 500) {
-      throw new Error("Server error — please try again later");
-    }
-    throw new Error(`Request failed (${res.status})`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
 
 function buildQs(params?: Record<string, string>): string {
   return params ? "?" + new URLSearchParams(params).toString() : "";

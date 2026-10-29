@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import re
+
+from django.db import transaction
 from rest_framework import serializers
 
 from circles.models import Circle, CircleMember, CIRCLE_PRESET_CHOICES, PRESET_ROLES
+
+
+def validate_avatar_color(value: str) -> str:
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+        raise serializers.ValidationError("avatar_color must be a hex color (e.g. '#E76F51').")
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +37,7 @@ class CircleSerializer(serializers.ModelSerializer):
             "created_at",
             "member_count",
         ]
-        read_only_fields = ["id", "created_at", "member_count"]
+        read_only_fields = ["id", "tenant_id", "created_at", "member_count"]
 
     def get_member_count(self, obj: Circle) -> int:
         return obj.members.count()
@@ -45,9 +54,9 @@ class CircleSerializer(serializers.ModelSerializer):
         # Enforce at most one primary circle per tenant at creation time.
         # On update the database constraint will catch violations too.
         if attrs.get("is_primary"):
-            tenant_id = attrs.get(
-                "tenant_id",
-                getattr(self.instance, "tenant_id", None),
+            tenant_id = (
+                self.instance.tenant_id if self.instance
+                else str(self.context["request"].user.pk)
             )
             qs = Circle.objects.filter(tenant_id=tenant_id, is_primary=True)
             if self.instance:
@@ -66,13 +75,18 @@ class CircleCreateSerializer(CircleSerializer):
     spoofed via the request body.
     """
 
-    class Meta(CircleSerializer.Meta):
-        read_only_fields = CircleSerializer.Meta.read_only_fields + ["tenant_id"]
-
+    @transaction.atomic
     def create(self, validated_data: dict) -> Circle:
         request = self.context["request"]
         validated_data["tenant_id"] = str(request.user.pk)
-        return Circle.objects.create(**validated_data)
+        circle = Circle.objects.create(**validated_data)
+        CircleMember.objects.create(
+            circle=circle,
+            user=request.user,
+            role="admin",
+            display_name=(request.user.get_full_name() or request.user.username)[:100],
+        )
+        return circle
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +111,6 @@ class CircleMemberSerializer(serializers.ModelSerializer):
             "display_name",
             "avatar_color",
             "avatar_emoji",
-            "invite_token",
             "invite_accepted_at",
             "membership_type",
             "external_issuer",
@@ -109,7 +122,6 @@ class CircleMemberSerializer(serializers.ModelSerializer):
             "user",
             "username",
             "circle_name",
-            "invite_token",
             "invite_accepted_at",
             "created_at",
         ]
@@ -128,11 +140,7 @@ class CircleMemberSerializer(serializers.ModelSerializer):
         return value
 
     def validate_avatar_color(self, value: str) -> str:
-        if not value.startswith("#") or len(value) != 7:
-            raise serializers.ValidationError(
-                "avatar_color must be a 7-character hex string (e.g. '#E76F51')."
-            )
-        return value
+        return validate_avatar_color(value)
 
 
 class CircleMemberUpdateRoleSerializer(serializers.ModelSerializer):
@@ -141,6 +149,9 @@ class CircleMemberUpdateRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CircleMember
         fields = ["role", "display_name", "avatar_color", "avatar_emoji"]
+
+    def validate_avatar_color(self, value: str) -> str:
+        return validate_avatar_color(value)
 
     def validate_role(self, value: str) -> str:
         circle = self.instance.circle if self.instance else None
@@ -179,14 +190,16 @@ class InviteCreateSerializer(serializers.Serializer):
         return value
 
     def validate_avatar_color(self, value: str) -> str:
-        if not value.startswith("#") or len(value) != 7:
-            raise serializers.ValidationError(
-                "avatar_color must be a 7-character hex string (e.g. '#E76F51')."
-            )
-        return value
+        return validate_avatar_color(value)
 
 
 class InviteAcceptSerializer(serializers.Serializer):
     """Input for accepting an invite token (resolves to a CircleMember)."""
 
     token = serializers.CharField(max_length=512)
+    display_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    avatar_color = serializers.CharField(max_length=7, default="#E76F51")
+    avatar_emoji = serializers.CharField(max_length=10, default="", allow_blank=True)
+
+    def validate_avatar_color(self, value: str) -> str:
+        return validate_avatar_color(value)

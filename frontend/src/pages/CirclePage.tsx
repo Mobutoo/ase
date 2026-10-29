@@ -136,11 +136,10 @@ export function CirclePage() {
   }, [currentCircle, fetchMembers]);
 
   const handleInvite = async (payload: Parameters<typeof inviteMember>[1]) => {
-    if (!currentCircle) return;
+    if (!currentCircle) return null;
     setIsSaving(true);
     try {
-      await inviteMember(currentCircle.id, payload);
-      setActiveTab("members");
+      return await inviteMember(currentCircle.id, payload);
     } finally {
       setIsSaving(false);
     }
@@ -296,7 +295,7 @@ export function CirclePage() {
                 <p className="text-sm text-ase-muted">Select a circle to invite members</p>
               </div>
             ) : (
-              <InviteForm onInvite={handleInvite} isLoading={isSaving} />
+              <InviteForm key={currentCircle.id} preset={currentCircle.preset} onInvite={handleInvite} isLoading={isSaving} />
             )}
           </div>
         )}

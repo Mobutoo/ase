@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from .models import User, SlicePomodoros, UserSettings, Rewards, Statistics
 from .forms import ProfileForm
@@ -28,6 +30,7 @@ def index(request):
     return render(request, 'app/index.html')
 
 
+@never_cache
 def profile(request, username):
     """Display the profile page"""
     if request.user.is_authenticated:
@@ -74,8 +77,10 @@ def profile(request, username):
                 'page_obj': page_obj
             })
 
-    if User.objects.filter(username=username):
-        userProfile = User.objects.get(username=username)
+    userProfile = User.objects.filter(
+        username=username, settings__profile_public=True
+    ).select_related("settings").first()
+    if userProfile is not None:
         return render(request, 'app/profile.html', {
             'userProfile': userProfile,
             'averagePomos': Statistics.getAveragePomodoros(userProfile)
@@ -116,6 +121,7 @@ def terms(request):
     return render(request, 'app/terms.html')
 
 
+@require_POST
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse("index"))

@@ -6,29 +6,8 @@ import type { CircleMember } from "../types/circle";
 // API helpers — thin wrappers over fetch; mirrors client.ts pattern
 // ---------------------------------------------------------------------------
 
-function getCsrfToken(): string {
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : "";
-}
+import { request as apiRequest } from "../api/request";
 
-async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CSRFToken": getCsrfToken(),
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`Calendar API ${res.status}:`, body);
-    if (res.status === 401 || res.status === 403) throw new Error("Please log in to continue");
-    if (res.status === 404) throw new Error("Resource not found");
-    if (res.status >= 500) throw new Error("Server error — please try again later");
-    throw new Error(`Request failed (${res.status})`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
 
 // ---------------------------------------------------------------------------
 // Payload conversion: frontend (camelCase) → API (camelCase via DRF camel-case)
@@ -42,6 +21,7 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
 function toWritePayload(
   payload: Partial<CalendarEvent>,
   calendars: Calendar[],
+  isCreate = false,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
@@ -77,7 +57,7 @@ function toWritePayload(
   }
 
   // Auto-select first calendar if none provided
-  if (!result["calendar"] && calendars.length > 0) {
+  if (isCreate && !result["calendar"] && calendars.length > 0) {
     result["calendar"] = calendars[0].id;
   }
 
@@ -155,7 +135,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   createEvent: async (payload) => {
     set({ loading: true, error: null });
     try {
-      const apiPayload = toWritePayload(payload, get().calendars);
+      const apiPayload = toWritePayload(payload, get().calendars, true);
       const created = await apiRequest<CalendarEvent>("/api/calendar/events/", {
         method: "POST",
         body: JSON.stringify(apiPayload),

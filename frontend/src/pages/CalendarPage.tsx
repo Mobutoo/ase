@@ -214,6 +214,7 @@ export function CalendarPage() {
 
   // Modals state
   const [createOpen, setCreateOpen] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -245,17 +246,13 @@ export function CalendarPage() {
     if (currentCircle) void fetchMembers(currentCircle.id);
   }, [currentCircle, fetchMembers]);
 
-  // NLP quick-add: sends raw text to backend for parsing
+  // Confirm dates in the form: the backend does not provide NLP parsing.
   const handleQuickAdd = useCallback(
     async (text: string) => {
-      setIsSaving(true);
-      try {
-        await createEvent({ title: text, eventType: "event", description: "" });
-      } finally {
-        setIsSaving(false);
-      }
+      setDraftTitle(text);
+      setCreateOpen(true);
     },
-    [createEvent]
+    []
   );
 
   // Save from modal
@@ -281,15 +278,16 @@ export function CalendarPage() {
               conflicts,
               onForce: async () => {
                 setConflictDialog((p) => ({ ...p, open: false }));
-                await createEvent(payload);
+                const created = await createEvent(payload);
+                setCreateOpen(!created);
               },
             });
             setIsSaving(false);
-            return;
+            setCreateOpen(false);
+            return false;
           }
         }
-        await createEvent(payload);
-        setCreateOpen(false);
+        return Boolean(await createEvent(payload));
       } finally {
         setIsSaving(false);
       }
@@ -300,8 +298,7 @@ export function CalendarPage() {
   const handleRecurringConfirm = useCallback(
     async (scope: RecurringEditScope) => {
       setRecurringDialog((p) => ({ ...p, open: false }));
-      // scope passed to backend via query param
-      await deleteEvent(recurringDialog.eventId + `?scope=${scope}`);
+      if (scope === "all") await deleteEvent(recurringDialog.eventId);
     },
     [deleteEvent, recurringDialog.eventId]
   );
@@ -533,7 +530,7 @@ export function CalendarPage() {
       {/* ── FAB — New event ───────────────────────────────────────── */}
       <button
         type="button"
-        onClick={() => setCreateOpen(true)}
+        onClick={() => { setDraftTitle(""); setCreateOpen(true); }}
         aria-label="New event"
         className="fixed bottom-20 right-4 sm:right-6 z-50 flex items-center gap-2 px-3 sm:px-4 py-3 rounded-2xl bg-ase-gold text-black font-semibold text-sm shadow-glow-lg hover:bg-ase-gold/90 active:scale-95 transition-all duration-150"
       >
@@ -543,6 +540,8 @@ export function CalendarPage() {
 
       {/* ── Modals ────────────────────────────────────────────────── */}
       <EventCreateModal
+        key={`${selectedDate}:${draftTitle}`}
+        initialTitle={draftTitle}
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         onSave={handleSaveEvent}

@@ -68,7 +68,7 @@ export function RecurringEditDialog({
 
         {/* Scope options */}
         <div className="p-4 flex flex-col gap-2">
-          {options.map((opt) => (
+          {options.filter((opt) => action !== "delete" || opt.value === "all").map((opt) => (
             <button
               key={opt.value}
               type="button"

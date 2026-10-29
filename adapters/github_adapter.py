@@ -11,7 +11,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-import requests
+from .http import github_http as requests
+from .http import validate_url
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from .base import TaskDTO, TaskSource
@@ -58,6 +59,7 @@ class GitHubAdapter(TaskSource):
     """TaskSource implementation backed by GitHub Issues on a single repo."""
 
     def __init__(self, config: dict) -> None:
+        validate_url(_GITHUB_API, fixed_origin=_GITHUB_API)
         self._token = config["token"]
         self._owner = config["owner"]
         self._repo = config["repo"]

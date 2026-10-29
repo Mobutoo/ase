@@ -41,7 +41,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import requests
+from .http import adapter_http as requests
+from .http import validate_url
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from .base import TaskDTO, TaskSource
@@ -97,7 +98,7 @@ class GrocyAdapter(TaskSource):
             raise KeyError("GrocyAdapter requires 'api_url' in config or GROCY_URL env var.")
         if not api_key:
             raise KeyError("GrocyAdapter requires 'api_key' in config or GROCY_API_KEY env var.")
-        self._api_url = api_url.rstrip("/")
+        self._api_url = validate_url(api_url).rstrip("/")
         self._api_key = api_key
 
     @property

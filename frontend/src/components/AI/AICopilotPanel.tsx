@@ -83,21 +83,21 @@ export function AICopilotPanel() {
 
   const filteredSuggestions = suggestions.filter((s) => {
     if (activeTab === "all") {
-      return INLINE_TYPES.includes(s.suggestion_type as AISuggestionType);
+      return INLINE_TYPES.includes(s.suggestionType as AISuggestionType);
     }
     if (activeTab === "daily_plan" || activeTab === "reflection_prompt") {
       return false; // handled by dedicated cards
     }
-    return s.suggestion_type === activeTab;
+    return s.suggestionType === activeTab;
   });
 
   // Count per tab
   const countForTab = (tab: FilterTab): number => {
-    if (tab === "all") return suggestions.filter((s) => INLINE_TYPES.includes(s.suggestion_type as AISuggestionType)).length;
+    if (tab === "all") return suggestions.filter((s) => INLINE_TYPES.includes(s.suggestionType as AISuggestionType)).length;
     if (tab === "daily_plan" || tab === "reflection_prompt") {
-      return suggestions.filter((s) => s.suggestion_type === tab).length;
+      return suggestions.filter((s) => s.suggestionType === tab).length;
     }
-    return suggestions.filter((s) => s.suggestion_type === tab).length;
+    return suggestions.filter((s) => s.suggestionType === tab).length;
   };
 
   return (

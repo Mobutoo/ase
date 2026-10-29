@@ -13,11 +13,11 @@ export type AISuggestionType =
 export interface AISuggestion {
   id: number;
   username: string;
-  suggestion_type: AISuggestionType;
-  /** Arbitrary JSON from the AI — shape varies by suggestion_type. */
+  suggestionType: AISuggestionType;
+  /** Arbitrary JSON from the AI — shape varies by suggestionType. */
   content: unknown;
   accepted: boolean | null;
-  created_at: string;
+  createdAt: string;
 }
 
 // --- Content shapes by type (best-effort — AI output may vary) ---
@@ -26,7 +26,7 @@ export interface DailyPlanItem {
   time?: string;
   task?: string;
   title?: string;
-  duration_minutes?: number;
+  durationMinutes?: number;
   notes?: string;
 }
 
@@ -37,10 +37,10 @@ export interface DailyPlanContent {
 }
 
 export interface TaskDecompositionContent {
-  task_title?: string;
+  taskTitle?: string;
   steps?: string[];
   subtasks?: string[];
-  estimated_total_minutes?: number;
+  estimatedTotalMinutes?: number;
 }
 
 export interface ReflectionPromptContent {

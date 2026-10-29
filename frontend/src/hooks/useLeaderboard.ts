@@ -17,7 +17,7 @@ interface LeaderboardState {
   setPeriod: (period: LeaderboardPeriod) => void;
 }
 
-const EMPTY_REWARDS: RewardsResponse = { total_achievements: 0, recent: [] };
+const EMPTY_REWARDS: RewardsResponse = { totalAchievements: 0, recent: [] };
 
 export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
   entries: [],
@@ -58,7 +58,7 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await leaderboardApi.rewards();
-      // Backend returns { total_achievements, recent } — store the object directly.
+      // Backend returns { totalAchievements, recent } — store the object directly.
       const rewards: RewardsResponse =
         data && typeof data === "object" && !Array.isArray(data)
           ? data

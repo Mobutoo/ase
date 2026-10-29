@@ -13,42 +13,8 @@ import type {
   CreatePlaylistPayload,
 } from "../types/phase2";
 
-function getCsrfToken(): string {
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : "";
-}
+import { request } from "./request";
 
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CSRFToken": getCsrfToken(),
-    ...((options.headers as Record<string, string>) ?? {}),
-  };
-
-  const res = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`API Error ${res.status}:`, body);
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("Please log in to continue");
-    }
-    if (res.status === 404) {
-      throw new Error("Resource not found");
-    }
-    if (res.status >= 500) {
-      throw new Error("Server error — please try again later");
-    }
-    throw new Error(`Request failed (${res.status})`);
-  }
-
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
 
 // --- Unified Tasks ---
 export const unifiedTasks = {
@@ -80,23 +46,43 @@ export const unifiedTasks = {
 };
 
 // --- Playlists ---
+interface ApiPlaylist {
+  id: number | string;
+  name: string;
+  url: string;
+  mode: Playlist["mode"] | "";
+  isDefault: boolean;
+}
+
+function readPlaylist(data: ApiPlaylist): Playlist {
+  return { id: String(data.id), name: data.name, youtubeUrl: data.url,
+    mode: data.mode || "custom", isDefault: data.isDefault, isCustom: true };
+}
+
+function writePlaylist(data: Partial<CreatePlaylistPayload>) {
+  const { youtubeUrl, mode, ...rest } = data;
+  return { ...rest, ...(youtubeUrl !== undefined ? { url: youtubeUrl } : {}),
+    ...(mode !== undefined ? { mode: mode === "custom" ? "" : mode } : {}) };
+}
+
 export const playlists = {
-  list: (params?: Record<string, string>) => {
+  list: async (params?: Record<string, string>) => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return request<PaginatedResponse<Playlist>>(`/api/v1/playlists/${qs}`);
+    const page = await request<PaginatedResponse<ApiPlaylist>>(`/api/v1/playlists/${qs}`);
+    return { ...page, results: page.results.map(readPlaylist) };
   },
 
-  create: (data: CreatePlaylistPayload) =>
-    request<Playlist>("/api/v1/playlists/", {
+  create: async (data: CreatePlaylistPayload) =>
+    readPlaylist(await request<ApiPlaylist>("/api/v1/playlists/", {
       method: "POST",
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({ ...writePlaylist(data), source: "youtube" }),
+    })),
 
-  update: (id: string, data: Partial<CreatePlaylistPayload>) =>
-    request<Playlist>(`/api/v1/playlists/${id}/`, {
+  update: async (id: string, data: Partial<CreatePlaylistPayload>) =>
+    readPlaylist(await request<ApiPlaylist>(`/api/v1/playlists/${id}/`, {
       method: "PATCH",
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify(writePlaylist(data)),
+    })),
 
   delete: (id: string) =>
     request<void>(`/api/v1/playlists/${id}/`, { method: "DELETE" }),

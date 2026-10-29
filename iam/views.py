@@ -9,10 +9,11 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import SimpleRateThrottle
 
 from .models import AppSpecificPassword, CircleInviteToken, TrustedExternalIdP
 from .serializers import (
@@ -171,6 +172,19 @@ class AppPasswordDetailView(APIView):
 # ---------------------------------------------------------------------------
 
 
+class AppPasswordVerifyThrottle(SimpleRateThrottle):
+    scope = "app_password_verify"
+    rate = "10/min"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+class AppPasswordCredentialsSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(max_length=128, trim_whitespace=False)
+
+
 class AppPasswordVerifyView(APIView):
     """Internal endpoint: verify a username + app-specific password pair.
 
@@ -190,22 +204,20 @@ class AppPasswordVerifyView(APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    throttle_classes = [AppPasswordVerifyThrottle]
 
     def post(self, request: Request) -> Response:
         from django.contrib.auth import get_user_model
 
-        username = request.data.get("username", "").strip()
-        raw_password = request.data.get("password", "")
-
-        if not username or not raw_password:
-            return Response(
-                {"detail": "username and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = AppPasswordCredentialsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data["username"]
+        raw_password = serializer.validated_data["password"]
 
         User = get_user_model()
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(username=username, is_active=True)
         except User.DoesNotExist:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 

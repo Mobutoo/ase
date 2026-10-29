@@ -1,12 +1,15 @@
+# syntax=docker/dockerfile:1
 ###############
 # FRONTEND    #
 ###############
 
-FROM node:20-alpine AS frontend
+FROM node:24-alpine AS frontend
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi && \
+    npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 
@@ -26,8 +29,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+COPY requirements.lock .
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi && \
+    pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.lock
 
 
 #########
@@ -52,9 +57,8 @@ WORKDIR $APP_HOME
 
 # Install dependencies
 COPY --from=builder /usr/src/app/wheels /wheels
-COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache /wheels/* && \
+COPY --from=builder /usr/src/app/requirements.lock .
+RUN pip install --no-cache --no-index /wheels/* && \
     rm -rf /wheels
 
 # Copy project

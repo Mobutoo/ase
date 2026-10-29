@@ -2,13 +2,18 @@ import logging
 
 from django.conf import settings
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.response import Response
 
 from app.models import AISuggestion, EnergyReading, LocalTask, Session, UserSettings
 from app.webhooks import send_daily_plan_request, send_reflection_prompt
+from api.parsers import UserSettingsJSONParser
+from api.renderers import UserSettingsJSONRenderer
 from api.serializers import (
     AISuggestionSerializer,
     EnergyReadingSerializer,
@@ -16,6 +21,7 @@ from api.serializers import (
     SessionCompleteSerializer,
     SessionSerializer,
     UserSettingsSerializer,
+    WebhookPayloadSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -125,6 +131,7 @@ class WebhookViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     # Maps event type → internal suggestion_type value
     _EVENT_TO_TYPE = {
@@ -138,34 +145,28 @@ class WebhookViewSet(viewsets.ViewSet):
         """Return True if the incoming request carries the correct webhook secret."""
         expected = getattr(settings, "N8N_WEBHOOK_SECRET", "")
         if not expected:
-            # Secret not configured — accept all (dev/test mode)
-            logger.warning("N8N_WEBHOOK_SECRET not set; accepting unauthenticated webhook")
-            return True
+            return False
         provided = request.headers.get("X-Webhook-Secret", "")
-        return provided == expected
+        return constant_time_compare(provided, expected)
 
     def create(self, request):
         """POST /api/v1/webhooks/ — receive AI suggestion callback from n8n."""
+        if not getattr(settings, "N8N_WEBHOOK_SECRET", ""):
+            logger.error("N8N_WEBHOOK_SECRET not configured; inbound webhook disabled")
+            return Response(
+                {"error": "Webhook unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         if not self._validate_secret(request):
             logger.warning("Incoming webhook rejected: invalid secret")
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
-        event_type = request.data.get("event")
-        username = request.data.get("user")
-        content = request.data.get("content")
-
-        if not event_type or not username or content is None:
-            return Response(
-                {"error": "Missing required fields: event, user, content"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        suggestion_type = self._EVENT_TO_TYPE.get(event_type)
-        if not suggestion_type:
-            return Response(
-                {"error": f"Unknown event type: {event_type}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = WebhookPayloadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+        username = payload["user"]
+        content = payload["content"]
+        suggestion_type = self._EVENT_TO_TYPE[payload["event"]]
 
         # Resolve user
         from django.contrib.auth import get_user_model
@@ -278,6 +279,8 @@ class AISuggestionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UserSettingsViewSet(viewsets.GenericViewSet):
     serializer_class = UserSettingsSerializer
+    parser_classes = [UserSettingsJSONParser, FormParser, MultiPartParser]
+    renderer_classes = [UserSettingsJSONRenderer, BrowsableAPIRenderer]
 
     def get_object(self):
         settings, _ = UserSettings.objects.get_or_create(user=self.request.user)

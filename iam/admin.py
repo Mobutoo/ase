@@ -4,7 +4,29 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
-from .models import AppSpecificPassword, CircleInviteToken, OIDCConfig, TrustedExternalIdP
+from .models import AppSpecificPassword, CircleInviteToken, OIDCConfig, OIDCIdentity, TrustedExternalIdP
+
+
+@admin.register(OIDCIdentity)
+class OIDCIdentityAdmin(admin.ModelAdmin):
+    list_display = ["user", "issuer", "subject"]
+    search_fields = ["user__username", "issuer", "subject"]
+    raw_id_fields = ["user"]
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
 
 @admin.register(OIDCConfig)
@@ -37,6 +59,14 @@ class OIDCConfigAdmin(admin.ModelAdmin):
             # Hide the raw secret from non-superusers.
             readonly.append("client_secret")
         return readonly
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if request.user.is_superuser:
+            return fieldsets
+        return [(title, {**options, "fields": [field for field in options["fields"]
+                                               if field != "client_secret"]})
+                for title, options in fieldsets]
 
 
 @admin.register(TrustedExternalIdP)
@@ -72,6 +102,14 @@ class TrustedExternalIdPAdmin(admin.ModelAdmin):
             readonly.append("client_secret")
         return readonly
 
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if request.user.is_superuser:
+            return fieldsets
+        return [(title, {**options, "fields": [field for field in options["fields"]
+                                               if field != "client_secret"]})
+                for title, options in fieldsets]
+
 
 @admin.register(AppSpecificPassword)
 class AppSpecificPasswordAdmin(admin.ModelAdmin):
@@ -92,6 +130,7 @@ class AppSpecificPasswordAdmin(admin.ModelAdmin):
     list_filter = ["user"]
     search_fields = ["user__username", "user__email", "name"]
     readonly_fields = ["password_hash", "last_used_at", "created_at"]
+    exclude = ["password_hash"]
     raw_id_fields = ["user"]
 
     def is_expired_display(self, obj: AppSpecificPassword) -> str:
