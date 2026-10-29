@@ -30,16 +30,16 @@ export interface Session {
   id: number;
   username: string;
   mode: FlowMode;
-  started_at: string;
-  ended_at: string | null;
-  planned_duration: number;
-  actual_duration: number | null;
-  task_id: string | null;
-  task_title: string | null;
-  task_source: string;
-  energy_before: number | null;
-  energy_after: number | null;
-  playlist_url: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  plannedDuration: number;
+  actualDuration: number | null;
+  taskId: string | null;
+  taskTitle: string | null;
+  taskSource: string;
+  energyBefore: number | null;
+  energyAfter: number | null;
+  playlistUrl: string | null;
   notes: string;
   completed: boolean;
   tag: number | null;
@@ -56,11 +56,11 @@ export interface LocalTask {
   status: TaskStatus;
   priority: TaskPriority;
   labels: string[];
-  due_date: string | null;
-  estimated_minutes: number | null;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
+  dueDate: string | null;
+  estimatedMinutes: number | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // --- Energy ---
@@ -87,14 +87,14 @@ export interface UserSettings {
   breakColor: string;
   image: string;
   timezone: string;
-  deep_work_duration: number;
-  sprint_duration: number;
-  free_flow_enabled: boolean;
-  auto_mode_selection: boolean;
-  mode_label_map: Record<string, string[]>;
-  energy_tracking_enabled: boolean;
-  youtube_default_playlists: Record<string, string>;
-  profile_public: boolean;
+  deepWorkDuration: number;
+  sprintDuration: number;
+  freeFlowEnabled: boolean;
+  autoModeSelection: boolean;
+  modeLabelMap: Record<string, string[]>;
+  energyTrackingEnabled: boolean;
+  youtubeDefaultPlaylists: Record<string, string>;
+  profilePublic: boolean;
 }
 
 // --- Worker messages ---

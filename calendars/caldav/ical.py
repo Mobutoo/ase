@@ -151,15 +151,14 @@ def event_to_ics(event: Any) -> str:
 
     # DTSTART / DTEND
     if event.all_day:
-        from datetime import date as date_type
         vevent.add("dtstart").value = event.start_at.date()
         vevent.add("dtend").value = event.end_at.date()
     else:
-        vevent.add("dtstart").value = event.start_at.replace(tzinfo=timezone.utc)
-        vevent.add("dtend").value = event.end_at.replace(tzinfo=timezone.utc)
+        vevent.add("dtstart").value = _to_utc(event.start_at).astimezone(vobject.icalendar.utc)
+        vevent.add("dtend").value = _to_utc(event.end_at).astimezone(vobject.icalendar.utc)
 
     # DTSTAMP
-    vevent.add("dtstamp").value = datetime.now(tz=timezone.utc)
+    vevent.add("dtstamp").value = datetime.now(tz=vobject.icalendar.utc)
 
     # RRULE
     if event.recurrence_rule:

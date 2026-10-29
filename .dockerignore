@@ -13,3 +13,9 @@ Dockerfile
 .DS_Store
 .aws
 .ssh
+
+.venv
+.env
+.env.*
+!.env.example
+*.sqlite3

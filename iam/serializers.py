@@ -10,7 +10,7 @@ from .models import AppSpecificPassword, CircleInviteToken, OIDCConfig, TrustedE
 class AppSpecificPasswordCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a new app-specific password.
 
-    Accepts ``password`` in plaintext during creation, hashes it with bcrypt,
+    Accepts ``password`` in plaintext during creation, uses Django's configured hasher,
     and never returns the hash thereafter.
     """
 
@@ -20,7 +20,8 @@ class AppSpecificPasswordCreateSerializer(serializers.ModelSerializer):
         min_length=12,
         max_length=128,
         style={"input_type": "password"},
-        help_text="Plaintext password shown once; stored as bcrypt hash.",
+        trim_whitespace=False,
+        help_text="Plaintext password shown once; stored using Django's password hasher.",
     )
 
     class Meta:
@@ -41,7 +42,7 @@ class AppSpecificPasswordCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> AppSpecificPassword:
         raw_password = validated_data.pop("password")
-        validated_data["password_hash"] = make_password(raw_password, hasher="bcrypt")
+        validated_data["password_hash"] = make_password(raw_password)
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
 

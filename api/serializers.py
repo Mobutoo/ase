@@ -86,6 +86,16 @@ class LocalTaskSerializer(serializers.ModelSerializer):
 
 
 class EnergyReadingSerializer(serializers.ModelSerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get("request")
+        fields["session"].queryset = (
+            Session.objects.filter(user=request.user)
+            if request and request.user.is_authenticated
+            else Session.objects.none()
+        )
+        return fields
+
     class Meta:
         model = EnergyReading
         fields = ["id", "timestamp", "level", "context", "session"]
@@ -94,6 +104,17 @@ class EnergyReadingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class WebhookPayloadSerializer(serializers.Serializer):
+    event = serializers.ChoiceField(choices=AISuggestion._meta.get_field("suggestion_type").choices)
+    user = serializers.CharField(max_length=150)
+    content = serializers.JSONField()
+
+    def validate_content(self, value):
+        if not isinstance(value, (dict, list)):
+            raise serializers.ValidationError("content must be a JSON object or array")
+        return value
 
 
 class AISuggestionSerializer(serializers.ModelSerializer):

@@ -5,29 +5,8 @@ import type { AgentAction, MemberPreference, NotificationPreference } from "../t
 // API helpers
 // ---------------------------------------------------------------------------
 
-function getCsrfToken(): string {
-  const match = document.cookie.match(/csrftoken=([^;]+)/);
-  return match ? match[1] : "";
-}
+import { request as apiRequest } from "../api/request";
 
-async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CSRFToken": getCsrfToken(),
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`Agent API ${res.status}:`, body);
-    if (res.status === 401 || res.status === 403) throw new Error("Please log in to continue");
-    if (res.status === 404) throw new Error("Resource not found");
-    if (res.status >= 500) throw new Error("Server error — please try again later");
-    throw new Error(`Request failed (${res.status})`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
 
 /** Build the base URL for agent endpoints nested under a circle. */
 function agentBase(circleId: string): string {

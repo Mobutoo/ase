@@ -30,6 +30,7 @@ import time
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -37,7 +38,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from circles.models import Circle, CircleMember
+from circles.models import Circle, CircleMember, PRESET_ROLES
 from circles.permissions import (
     IsCircleAdmin,
     IsCircleAdult,
@@ -83,22 +84,24 @@ def _verify_invite_token(token: str) -> tuple[int, str] | None:
         if len(parts) != 5:
             return None
         circle_id_str, role, timestamp_str, nonce, sig = parts
+        circle_id = int(circle_id_str)
         timestamp = int(timestamp_str)
     except (ValueError, AttributeError):
         return None
 
     # Expiry check
-    if int(time.time()) - timestamp > _INVITE_TTL_SECONDS:
+    age = int(time.time()) - timestamp
+    if circle_id <= 0 or age < 0 or age > _INVITE_TTL_SECONDS:
         return None
 
     # Signature check (constant-time comparison)
     secret = settings.SECRET_KEY.encode()
     message = f"{circle_id_str}:{role}:{timestamp_str}:{nonce}".encode()
     expected_sig = hmac.new(secret, message, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(sig, expected_sig):
+    if not constant_time_compare(sig, expected_sig):
         return None
 
-    return int(circle_id_str), role
+    return circle_id, role
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +226,9 @@ class CircleViewSet(viewsets.ModelViewSet):
         if str(circle.pk) != str(pk):
             raise ValidationError({"token": "Token does not match this circle."})
 
+        if role not in PRESET_ROLES.get(circle.preset, ()):
+            raise ValidationError({"token": "Invite role is no longer valid for this circle."})
+
         user: User = request.user
 
         if CircleMember.objects.filter(user=user, circle=circle).exists():
@@ -230,9 +236,10 @@ class CircleViewSet(viewsets.ModelViewSet):
                 {"detail": "You are already a member of this circle."}
             )
 
-        display_name = request.data.get("display_name") or user.get_full_name() or user.username
-        avatar_color = request.data.get("avatar_color", "#E76F51")
-        avatar_emoji = request.data.get("avatar_emoji", "")
+        data = serializer.validated_data
+        display_name = data.get("display_name") or (user.get_full_name() or user.username)[:100]
+        avatar_color = data["avatar_color"]
+        avatar_emoji = data["avatar_emoji"]
 
         member = CircleMember.objects.create(
             user=user,

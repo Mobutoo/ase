@@ -30,10 +30,10 @@ export function Leaderboard() {
     if (tab === "achievements" && achievements.length === 0) {
       fetchAchievements();
     }
-    if (tab === "rewards" && rewards.total_achievements === 0 && rewards.recent.length === 0) {
+    if (tab === "rewards" && rewards.totalAchievements === 0 && rewards.recent.length === 0) {
       fetchRewards();
     }
-  }, [tab, achievements.length, rewards.total_achievements, rewards.recent.length, fetchAchievements, fetchRewards]);
+  }, [tab, achievements.length, rewards.totalAchievements, rewards.recent.length, fetchAchievements, fetchRewards]);
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-10 min-h-screen">
@@ -87,7 +87,7 @@ export function Leaderboard() {
             <div className="h-48 card animate-pulse" />
           ) : (
             <RewardsPanel
-              totalAchievements={rewards.total_achievements}
+              totalAchievements={rewards.totalAchievements}
               recent={rewards.recent}
             />
           )

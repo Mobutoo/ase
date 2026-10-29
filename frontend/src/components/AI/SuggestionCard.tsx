@@ -46,7 +46,7 @@ function renderContent(content: unknown): React.ReactNode {
     if (typeof obj.summary === "string") lines.push(obj.summary);
     if (typeof obj.recommendation === "string") lines.push(obj.recommendation);
     if (typeof obj.prompt === "string") lines.push(obj.prompt);
-    if (typeof obj.task_title === "string") lines.push(`Task: ${obj.task_title}`);
+    if (typeof obj.taskTitle === "string") lines.push(`Task: ${obj.taskTitle}`);
 
     const items: string[] = [];
     const steps = obj.steps ?? obj.subtasks ?? obj.items ?? obj.tasks ?? obj.tips ?? obj.questions;
@@ -130,10 +130,10 @@ export function SuggestionCard({ suggestion }: SuggestionCardProps) {
   const isDismissed = suggestion.accepted === false;
   const isPending = suggestion.accepted === null;
 
-  const Icon = TYPE_ICON[suggestion.suggestion_type] ?? Brain;
-  const iconColor = TYPE_COLOR[suggestion.suggestion_type] ?? "text-[#f59e0b]";
-  const iconBg = TYPE_BG[suggestion.suggestion_type] ?? "bg-[#f59e0b]/10 border-[#f59e0b]/20";
-  const label = SUGGESTION_TYPE_LABELS[suggestion.suggestion_type] ?? suggestion.suggestion_type;
+  const Icon = TYPE_ICON[suggestion.suggestionType] ?? Brain;
+  const iconColor = TYPE_COLOR[suggestion.suggestionType] ?? "text-[#f59e0b]";
+  const iconBg = TYPE_BG[suggestion.suggestionType] ?? "bg-[#f59e0b]/10 border-[#f59e0b]/20";
+  const label = SUGGESTION_TYPE_LABELS[suggestion.suggestionType] ?? suggestion.suggestionType;
 
   return (
     <div
@@ -169,7 +169,7 @@ export function SuggestionCard({ suggestion }: SuggestionCardProps) {
             <span className="text-xs text-[#5a5a7e]">{t("ai.dismiss")}</span>
           )}
           <span className="text-xs text-[#5a5a7e]">
-            {formatTimestamp(suggestion.created_at)}
+            {formatTimestamp(suggestion.createdAt)}
           </span>
         </div>
       </div>

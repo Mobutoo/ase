@@ -5,6 +5,21 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class OIDCIdentity(models.Model):
+    """An explicitly bound, immutable OIDC issuer/subject account identity."""
+
+    user = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, related_name="oidc_identities"
+    )
+    issuer = models.URLField(max_length=500)
+    subject = models.CharField(max_length=255)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["issuer", "subject"], name="unique_oidc_identity"),
+        ]
+
+
 class OIDCConfig(models.Model):
     """OIDC configuration for the tenant (singleton per tenant).
 
@@ -102,7 +117,7 @@ class AppSpecificPassword(models.Model):
     """Application-specific password for CalDAV / CardDAV clients.
 
     Native apps (iOS Calendar, Thunderbird, etc.) cannot participate in an
-    OIDC browser redirect flow.  This model stores a bcrypt-hashed password
+    OIDC browser redirect flow.  This model stores a Django-hashed password
     that is validated independently of the main OIDC session.
 
     The plaintext password is shown to the user **once** at creation time and
@@ -159,10 +174,9 @@ class AppSpecificPassword(models.Model):
         return timezone.now() >= self.expires_at
 
     def check_password(self, raw_password: str) -> bool:
-        """Verify *raw_password* against the stored bcrypt hash.
+        """Verify *raw_password* against the stored Django password hash.
 
-        Uses Django's ``check_password`` which handles bcrypt identifiers
-        transparently when the hash is prefixed with ``bcrypt$``.
+        Uses Django's ``check_password`` and the configured password hashers.
         """
         from django.contrib.auth.hashers import check_password as django_check
 

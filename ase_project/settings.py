@@ -6,31 +6,42 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- Core ---
-DEBUG = os.environ.get("DEBUG", "1") == "1"
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-dev-key-change-in-production",
-)
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    "CSRF_TRUSTED_ORIGINS", "http://localhost:8000"
-).split(",")
+DEBUG = os.environ.get("DEBUG", "0") == "1"
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-local-development-only"
+    else:
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG=0.")
+if not DEBUG and (len(SECRET_KEY) < 50 or SECRET_KEY.startswith("django-insecure-")):
+    raise ImproperlyConfigured("Production SECRET_KEY must be a random value of at least 50 characters.")
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get(
+    "ALLOWED_HOSTS", "localhost,127.0.0.1"
+).split(",") if h.strip()]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get(
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:8000" if DEBUG else ""
+).split(",") if origin.strip()]
 
 # --- Security ---
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
-SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0") == "1"
-SECURE_HSTS_SECONDS = 2592000 if not DEBUG else 0
-SECURE_HSTS_PRELOAD = not DEBUG
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0" if DEBUG else "1") == "1"
+# Internal health probes have no session or credentials and must work over HTTP.
+SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_PRELOAD = False
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+# Only enable behind a trusted proxy that overwrites X-Forwarded-Proto.
+if os.environ.get("TRUST_PROXY_HEADERS", "0") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # --- Apps ---
 INSTALLED_APPS = [
-    "daphne",  # Must be before django.contrib.staticfiles
     "app",
     "api",
     "django.contrib.admin",
@@ -78,14 +89,12 @@ REST_FRAMEWORK = {
 SITE_ID = 1
 
 # --- Allauth (username-based, no Google OAuth for now) ---
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_EMAIL_VERIFICATION = False
+ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_AUTHENTICATION_METHOD = "username"
-ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {"username"}
+ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_EMAIL_FIELD = None
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 10
-ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 1800
+ACCOUNT_RATE_LIMITS = {"login_failed": "10/30m/key"}
 ACCOUNT_PASSWORD_MIN_LENGTH = 8
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if not DEBUG else "http"
 ACCOUNT_LOGIN_ON_PASSWORD_RESET = False
@@ -129,7 +138,7 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 WSGI_APPLICATION = "ase_project.wsgi.application"
 
@@ -281,3 +290,17 @@ CHANNEL_LAYERS = {
 # --- Celery ---
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/1')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
+
+# Exact operator-approved HTTPS origins for remote iCalendar subscriptions.
+# Empty by default: user-supplied URLs must not reach arbitrary internal services.
+ICAL_ALLOWED_ORIGINS = [origin.strip() for origin in os.environ.get(
+    "ICAL_ALLOWED_ORIGINS", ""
+).split(",") if origin.strip()]
+
+# Exact trusted integration origins and administrator-managed export files.
+ADAPTER_ALLOWED_ORIGINS = [value.strip() for value in os.environ.get(
+    "ADAPTER_ALLOWED_ORIGINS", ""
+).split(",") if value.strip()]
+ADAPTER_ALLOWED_FILES = [value.strip() for value in os.environ.get(
+    "ADAPTER_ALLOWED_FILES", ""
+).split(",") if value.strip()]

@@ -1,13 +1,14 @@
 from django.db import connection
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-from app.models import Pomodoro, UserSettings, Tag, User, Statistics
+from app.models import Pomodoro, Rewards, UserSettings, Tag, User, Statistics
 from datetime import datetime
 import pytz
 
-from django.views.decorators.cache import cache_page
+from django.views.decorators.cache import never_cache
 
 
 def health(request):
@@ -26,37 +27,39 @@ def health(request):
     }, status=status)
 
 
-@cache_page(60 * 25)
+def _visible_profile(request, username):
+    """Resolve only profiles whose activity the caller is allowed to read."""
+    visible = Q(settings__profile_public=True)
+    if request.user.is_authenticated:
+        visible |= Q(pk=request.user.pk)
+    return User.objects.select_related("settings").filter(
+        visible, username=username
+    ).first()
+
+
+@never_cache
 def getAllUserTags(request, username) -> JsonResponse:
     """Get all user's tags"""
     if request.method != 'GET':
         return JsonResponse({"error": "GET request required."}, status=400)
 
-    try:
-        user = User.objects.get(username=username)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            "error": "Username does not exist."
-        }, status=401)
+    user = _visible_profile(request, username)
+    if user is None:
+        return JsonResponse({"error": "Profile not found."}, status=404)
 
     tagDict = Statistics.aggregatePomodorosByTag(user)
     return JsonResponse(tagDict, safe=False, status=200)
 
 
-@cache_page(60 * 25)
+@never_cache
 def getAllUserPomosDates(request, username) -> JsonResponse:
     """Get all user's pomodoros dates"""
     if request.method != 'GET':
         return JsonResponse({"error": "GET request required."}, status=400)
 
-    try:
-        user = User.objects.get(username=username)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            "error": "Username does not exist."
-        }, status=401)
+    user = _visible_profile(request, username)
+    if user is None:
+        return JsonResponse({"error": "Profile not found."}, status=404)
 
     pomodoros = user.pomodoros.all()
 
@@ -64,19 +67,15 @@ def getAllUserPomosDates(request, username) -> JsonResponse:
                         safe=False, status=200)
 
 
-@cache_page(60 * 25)
+@never_cache
 def getAllUserPomodoros(request, username) -> JsonResponse:
     """Get all user's pomodoros dates"""
     if request.method != 'GET':
         return JsonResponse({"error": "GET request required."}, status=400)
 
-    try:
-        user = User.objects.get(username=username)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            "error": "Username does not exist."
-        }, status=401)
+    user = _visible_profile(request, username)
+    if user is None:
+        return JsonResponse({"error": "Profile not found."}, status=404)
 
     pomodoros = user.pomodoros.all()
 
@@ -84,18 +83,31 @@ def getAllUserPomodoros(request, username) -> JsonResponse:
                         safe=False, status=200)
 
 
-@cache_page(60 * 25)
+@never_cache
 def getAllPomodoros(request) -> JsonResponse:
     """Get all pomodoros"""
     if request.method != 'GET':
         return JsonResponse({"error": "GET request required."}, status=400)
 
-    pomodoros = Statistics.totalSumPomodorosPerUser()
+    # Legacy clients must honor the same opt-in policy as the v1 leaderboard.
+    users = User.objects.filter(settings__profile_public=True).select_related(
+        "settings", "rewards"
+    ).prefetch_related("pomodoros")
+    pomodoros = {}
+    for user in users:
+        totals = Statistics.totalSumPomodorosUser(user)
+        if totals:
+            rewards = getattr(user, "rewards", None) or Rewards()
+            pomodoros[user.username] = {
+                "pomos": totals,
+                "image": user.settings.image,
+                "rewards": rewards.getRewards(),
+            }
 
     return JsonResponse(pomodoros, safe=False, status=200)
 
 
-@cache_page(60 * 25)
+@never_cache
 def getSettings(request, token):
     if request.method != 'GET':
         return JsonResponse({"error": "GET request required."}, status=400)

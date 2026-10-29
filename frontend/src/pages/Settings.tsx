@@ -339,9 +339,9 @@ export function Settings() {
     (mode: string, url: string) => {
       setDraft((prev) => ({
         ...prev,
-        youtube_default_playlists: {
-          ...(settings?.youtube_default_playlists ?? {}),
-          ...(prev.youtube_default_playlists ?? {}),
+        youtubeDefaultPlaylists: {
+          ...(settings?.youtubeDefaultPlaylists ?? {}),
+          ...(prev.youtubeDefaultPlaylists ?? {}),
           [mode]: url,
         },
       }));
@@ -410,8 +410,8 @@ export function Settings() {
           <Card icon={Clock} title={t("settings.timer_durations")}>
             <SettingRow label={t("mode.deep_work")} description={t("settings.deep_work_desc")}>
               <NumberInput
-                value={effective.deep_work_duration}
-                onChange={(v) => patch("deep_work_duration", v)}
+                value={effective.deepWorkDuration}
+                onChange={(v) => patch("deepWorkDuration", v)}
                 min={10}
                 max={240}
                 suffix={t("generic.min")}
@@ -446,8 +446,8 @@ export function Settings() {
             </SettingRow>
             <SettingRow label={t("mode.sprint")} description={t("settings.sprint_desc")}>
               <NumberInput
-                value={effective.sprint_duration}
-                onChange={(v) => patch("sprint_duration", v)}
+                value={effective.sprintDuration}
+                onChange={(v) => patch("sprintDuration", v)}
                 min={10}
                 max={120}
                 suffix={t("generic.min")}
@@ -458,8 +458,8 @@ export function Settings() {
               description={t("settings.free_flow_desc")}
             >
               <Toggle
-                checked={effective.free_flow_enabled}
-                onChange={(v) => patch("free_flow_enabled", v)}
+                checked={effective.freeFlowEnabled}
+                onChange={(v) => patch("freeFlowEnabled", v)}
               />
             </SettingRow>
           </Card>
@@ -493,7 +493,7 @@ export function Settings() {
                 key={key}
                 mode={key}
                 label={t(labelKey)}
-                url={effective.youtube_default_playlists?.[key] ?? ""}
+                url={effective.youtubeDefaultPlaylists?.[key] ?? ""}
                 onChange={(url) => patchPlaylist(key, url)}
               />
             ))}
@@ -506,8 +506,8 @@ export function Settings() {
               description={t("settings.energy_tracking_desc")}
             >
               <Toggle
-                checked={effective.energy_tracking_enabled}
-                onChange={(v) => patch("energy_tracking_enabled", v)}
+                checked={effective.energyTrackingEnabled}
+                onChange={(v) => patch("energyTrackingEnabled", v)}
               />
             </SettingRow>
             <SettingRow
@@ -515,8 +515,8 @@ export function Settings() {
               description={t("settings.auto_mode_desc")}
             >
               <Toggle
-                checked={effective.auto_mode_selection}
-                onChange={(v) => patch("auto_mode_selection", v)}
+                checked={effective.autoModeSelection}
+                onChange={(v) => patch("autoModeSelection", v)}
               />
             </SettingRow>
           </Card>
@@ -528,8 +528,8 @@ export function Settings() {
               description={t("settings.public_profile_desc")}
             >
               <Toggle
-                checked={effective.profile_public}
-                onChange={(v) => patch("profile_public", v)}
+                checked={effective.profilePublic}
+                onChange={(v) => patch("profilePublic", v)}
               />
             </SettingRow>
             <div className="py-3 flex items-center justify-between">

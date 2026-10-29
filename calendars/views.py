@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from datetime import timedelta, timezone as dt_timezone
 from typing import Any
 
 from django.db import transaction
 from django.http import HttpResponse
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
+from djangorestframework_camel_case.parser import CamelCaseJSONParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,8 +48,23 @@ class CalendarViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: CalendarSerializer) -> None:
         from circles.models import CircleMember
 
-        member = CircleMember.objects.get(user=self.request.user)
+        member = serializer.validated_data.get("owner") or CircleMember.objects.filter(
+            user=self.request.user
+        ).order_by("-circle__is_primary", "pk").first()
+        if member is None:
+            raise serializers.ValidationError({"owner": "Join a circle before creating a calendar."})
         serializer.save(owner=member)
+
+
+class EventFilterSerializer(serializers.Serializer):
+    calendar = serializers.IntegerField(min_value=1, required=False)
+    start = serializers.DateTimeField(required=False)
+    end = serializers.DateTimeField(required=False)
+
+    def validate(self, attrs):
+        if "start" in attrs and "end" in attrs and attrs["end"] < attrs["start"]:
+            raise serializers.ValidationError({"end": "end must not be before start."})
+        return attrs
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -61,12 +78,14 @@ class EventViewSet(viewsets.ModelViewSet):
             calendar__owner__user=self.request.user
         ).prefetch_related("reminders", "members")
 
-        calendar_id = self.request.query_params.get("calendar")
+        filters = EventFilterSerializer(data=self.request.query_params)
+        filters.is_valid(raise_exception=True)
+        calendar_id = filters.validated_data.get("calendar")
         if calendar_id:
             qs = qs.filter(calendar_id=calendar_id)
 
-        start = self.request.query_params.get("start")
-        end = self.request.query_params.get("end")
+        start = filters.validated_data.get("start")
+        end = filters.validated_data.get("end")
         if start:
             qs = qs.filter(end_at__gte=start)
         if end:
@@ -79,15 +98,18 @@ class EventViewSet(viewsets.ModelViewSet):
         self._update_etag(event)
 
     def perform_update(self, serializer: EventSerializer) -> None:
-        if serializer.instance and serializer.instance.subscription_id is not None:
-            raise PermissionDenied("Subscribed events are read-only.")
+        self._require_writable(serializer.instance)
         event = serializer.save()
         self._update_etag(event)
 
     def perform_destroy(self, instance: Event) -> None:
-        if instance.subscription_id is not None:
-            raise PermissionDenied("Subscribed events are read-only.")
+        self._require_writable(instance)
         instance.delete()
+
+    @staticmethod
+    def _require_writable(event: Event) -> None:
+        if event.subscription_id is not None:
+            raise PermissionDenied("Subscribed events are read-only.")
 
     @staticmethod
     def _update_etag(event: Event) -> None:
@@ -111,6 +133,7 @@ class EventViewSet(viewsets.ModelViewSet):
         then updates that replacement event with the provided data.
         """
         recurring = self.get_object()
+        self._require_writable(recurring)
         if not recurring.recurrence_rule:
             return Response(
                 {"detail": "Event is not recurring."},
@@ -124,20 +147,22 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        original_start = serializers.DateTimeField().run_validation(original_start_raw)
+
         with transaction.atomic():
             replacement_data = {**request.data}
             replacement_data.pop("original_start", None)
             replacement_data["parent_event"] = recurring.pk
             replacement_data["recurrence_rule"] = None
 
-            serializer = EventSerializer(data=replacement_data)
+            serializer = self.get_serializer(data=replacement_data)
             serializer.is_valid(raise_exception=True)
             replacement = serializer.save()
             self._update_etag(replacement)
 
             EventException.objects.update_or_create(
                 recurring_event=recurring,
-                original_start=original_start_raw,
+                original_start=original_start,
                 defaults={"replacement_event": replacement},
             )
 
@@ -151,6 +176,7 @@ class EventViewSet(viewsets.ModelViewSet):
         then creates a new recurring event from the given occurrence onward.
         """
         recurring = self.get_object()
+        self._require_writable(recurring)
         if not recurring.recurrence_rule:
             return Response(
                 {"detail": "Event is not recurring."},
@@ -164,18 +190,24 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        original_start = serializers.DateTimeField().run_validation(original_start_raw)
+        if original_start <= recurring.start_at:
+            raise serializers.ValidationError({"original_start": "Use edit-all for the first occurrence."})
+
         with transaction.atomic():
             # Truncate original rule to end before this occurrence
-            until_stamp = original_start_raw.replace(":", "").replace("-", "").split(".")[0] + "Z"
+            until_stamp = (original_start - timedelta(seconds=1)).astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             truncated_rule = self._append_until(recurring.recurrence_rule, until_stamp)
-            Event.objects.filter(pk=recurring.pk).update(recurrence_rule=truncated_rule)
+            recurring.recurrence_rule = truncated_rule
+            recurring.save(update_fields=["recurrence_rule", "updated_at"])
+            self._update_etag(recurring)
 
             # Create the new tail recurring event
             new_data = {**request.data}
             new_data.pop("original_start", None)
             new_data["parent_event"] = recurring.pk
 
-            serializer = EventSerializer(data=new_data)
+            serializer = self.get_serializer(data=new_data)
             serializer.is_valid(raise_exception=True)
             new_event = serializer.save()
             self._update_etag(new_event)
@@ -186,7 +218,8 @@ class EventViewSet(viewsets.ModelViewSet):
     def edit_all(self, request: Request, pk: Any = None) -> Response:
         """Edit all occurrences of a recurring event in place."""
         event = self.get_object()
-        serializer = EventSerializer(event, data=request.data, partial=True)
+        self._require_writable(event)
+        serializer = self.get_serializer(event, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated = serializer.save()
         self._update_etag(updated)
@@ -195,7 +228,7 @@ class EventViewSet(viewsets.ModelViewSet):
     @staticmethod
     def _append_until(rrule: str, until_stamp: str) -> str:
         """Append or replace the UNTIL clause on an RRULE string."""
-        parts = [p for p in rrule.split(";") if not p.startswith("UNTIL=")]
+        parts = [p for p in rrule.split(";") if not p.upper().startswith(("UNTIL=", "COUNT="))]
         parts.append(f"UNTIL={until_stamp}")
         return ";".join(parts)
 
@@ -219,7 +252,11 @@ class CalendarSubscriptionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: CalendarSubscriptionSerializer) -> None:
         from circles.models import CircleMember
 
-        member = CircleMember.objects.get(user=self.request.user)
+        member = CircleMember.objects.filter(user=self.request.user).order_by(
+            "-circle__is_primary", "pk"
+        ).first()
+        if member is None:
+            raise serializers.ValidationError({"member": "Join a circle before adding a subscription."})
         serializer.save(member=member)
 
     @action(detail=True, methods=["post"], url_path="refresh")
@@ -248,10 +285,7 @@ class GoogleCalendarSyncViewSet(viewsets.ModelViewSet):
         ).select_related("ase_calendar", "member").order_by("-created_at")
 
     def perform_create(self, serializer: GoogleCalendarSyncSerializer) -> None:
-        from circles.models import CircleMember
-
-        member = CircleMember.objects.get(user=self.request.user)
-        serializer.save(member=member)
+        serializer.save(member=serializer.validated_data["ase_calendar"].owner)
 
     @action(detail=True, methods=["post"], url_path="sync-now")
     def sync_now(self, request: Request, pk: Any = None) -> Response:
@@ -281,7 +315,7 @@ class IcsImportView(APIView):
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser]
+    parser_classes = [MultiPartParser, CamelCaseJSONParser]
 
     def post(self, request: Request) -> Response:
         if "ics_file" in request.FILES:
@@ -314,7 +348,7 @@ class IcsImportView(APIView):
                 end_at=ev_data["end_at"],
                 calendar_id=None,
             )
-            conflicts = detect_conflicts(temp_event, calendar_scope=None)
+            conflicts = detect_conflicts(temp_event, calendar_scope=None).filter(calendar__owner__user=request.user)
             preview_items.append(
                 {
                     "uid": ev_data.get("uid", ""),

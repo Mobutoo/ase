@@ -18,7 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import requests
+from .http import adapter_http as requests
+from .http import validate_url, validate_file
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from .base import TaskDTO, TaskSource
@@ -32,6 +33,10 @@ class SuperProductivityAdapter(TaskSource):
     def __init__(self, config: dict) -> None:
         self._sync_url: str = config.get("sync_url", "")
         self._sync_file_path: str = config.get("sync_file_path", "")
+        if self._sync_url:
+            validate_url(self._sync_url)
+        elif self._sync_file_path:
+            validate_file(self._sync_file_path)
 
         if not self._sync_url and not self._sync_file_path:
             raise KeyError(
@@ -87,7 +92,7 @@ class SuperProductivityAdapter(TaskSource):
             return None
 
     def _read_from_file(self) -> str | None:
-        path = Path(self._sync_file_path)
+        path = validate_file(self._sync_file_path)
         if not path.is_file():
             logger.error(
                 "SuperProductivityAdapter: file not found at %s",

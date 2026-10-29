@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: ase
       POSTGRES_USER: ase
-      POSTGRES_PASSWORD: ase-preprod-2026
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,14 +28,21 @@ services:
     expose:
       - "8000"
     environment: &ase-env
-      DATABASE_URL: "postgres://ase:ase-preprod-2026@postgres:5432/ase"
+      DB_HOST: "postgres"
+      DB_NAME: "ase"
+      DB_USER: "ase"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
       REDIS_URL: "redis://redis:6379/0"
       CELERY_BROKER_URL: "redis://redis:6379/1"
       CELERY_RESULT_BACKEND: "redis://redis:6379/1"
-      SECRET_KEY: "preprod-secret-key-not-for-production-use"
-      DEBUG: "1"
-      ALLOWED_HOSTS: "*"
-      CSRF_TRUSTED_ORIGINS: "http://128.140.40.106,https://asepprd.ewutelo.cloud"
+      SECRET_KEY: "${SECRET_KEY:?Set a random SECRET_KEY of at least 50 characters}"
+      DEBUG: "0"
+      TRUST_PROXY_HEADERS: "1"
+      ALLOWED_HOSTS: "asepprd.ewutelo.cloud,localhost,127.0.0.1"
+      CSRF_TRUSTED_ORIGINS: "https://asepprd.ewutelo.cloud"
+      ICAL_ALLOWED_ORIGINS: "${ICAL_ALLOWED_ORIGINS:-}"
+      ADAPTER_ALLOWED_ORIGINS: "${ADAPTER_ALLOWED_ORIGINS:-}"
+      ADAPTER_ALLOWED_FILES: "${ADAPTER_ALLOWED_FILES:-}"
       # IAM — Zitadel OIDC (Flash Studio SSO)
       # Switch to "zitadel" and fill OIDC_* / ZITADEL_* vars to enable SSO.
       IAM_BACKEND: "${IAM_BACKEND:-zitadel}"

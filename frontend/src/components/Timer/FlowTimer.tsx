@@ -24,6 +24,7 @@ export function FlowTimer() {
   const phase = useTimerStore((s) => s.phase);
   const status = useTimerStore((s) => s.status);
   const remainingMs = useTimerStore((s) => s.remainingMs);
+  const elapsedMs = useTimerStore((s) => s.elapsedMs);
   const totalDurationMs = useTimerStore((s) => s.totalDurationMs);
   const pomodoroCount = useTimerStore((s) => s.pomodoroCount);
 
@@ -76,7 +77,7 @@ export function FlowTimer() {
               style={{ color: ringColor }}
             >
               {isFreeFlow
-                ? formatTime(useTimerStore.getState().elapsedMs)
+                ? formatTime(elapsedMs)
                 : formatTime(remainingMs)}
             </span>
             {isFreeFlow && (

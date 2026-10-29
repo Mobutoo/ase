@@ -12,7 +12,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-import requests
+from .http import adapter_http as requests
+from .http import validate_url
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from .base import TaskDTO, TaskSource
@@ -49,7 +50,7 @@ class PlaneAdapter(TaskSource):
     """TaskSource implementation backed by a self-hosted Plane API."""
 
     def __init__(self, config: dict) -> None:
-        self._api_url = config["api_url"].rstrip("/")
+        self._api_url = validate_url(config["api_url"]).rstrip("/")
         self._api_key = config["api_key"]
         self._workspace = config["workspace_slug"]
         self._project = config["project_id"]

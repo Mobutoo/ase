@@ -1,6 +1,5 @@
 {% extends 'app/layout.html' %}
 
-{% load socialaccount %}
 {% load static %}
 
 {% block styles %}
@@ -171,9 +170,8 @@
     {% if not user.is_authenticated %}
     <div class="third">
         <div class="text-center">
-            <a href="{% provider_login_url 'google' %}" class="text-dark google">
-                <img src="{% static 'app/images/google.png' %}" class="logo">
-                <span>Sign in with Google</span>
+            <a href="{% url 'account_login' %}" class="text-dark">
+                <span>Sign In</span>
             </a>
             <!--
                         <a href="" class="text-dark twitter">

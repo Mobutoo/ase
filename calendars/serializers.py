@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
@@ -94,9 +95,24 @@ class EventSerializer(serializers.ModelSerializer):
             "ical_uid",
             "google_event_id",
             "is_subscribed",
+            "validated_by",
+            "validated_at",
             "created_at",
             "updated_at",
         ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get("request")
+        if request is not None:
+            user = request.user
+            fields["calendar"].queryset = Calendar.objects.filter(owner__user=user)
+            fields["parent_event"].queryset = Event.objects.filter(calendar__owner__user=user)
+            fields["linked_task"].queryset = fields["linked_task"].queryset.filter(user=user)
+            fields["members"].child_relation.queryset = fields["members"].child_relation.queryset.filter(
+                circle__members__user=user
+            ).distinct()
+        return fields
 
     def get_is_subscribed(self, obj: Event) -> bool:
         return obj.subscription_id is not None
@@ -110,6 +126,20 @@ class EventSerializer(serializers.ModelSerializer):
         return data
 
     def validate(self, attrs: dict) -> dict:
+        calendar = attrs.get("calendar", self.instance.calendar if self.instance else None)
+        if calendar is not None:
+            members = attrs.get("members", self.instance.members.all() if self.instance else [])
+            if any(member.circle_id != calendar.owner.circle_id for member in members):
+                raise serializers.ValidationError({"members": "Members must belong to the calendar's circle."})
+            reminders = attrs.get("reminders", (
+                [{"member": reminder.member} for reminder in self.instance.reminders.select_related("member")]
+                if self.instance else []
+            ))
+            if any(reminder["member"].circle_id != calendar.owner.circle_id for reminder in reminders):
+                raise serializers.ValidationError({"reminders": "Reminder recipients must belong to the calendar's circle."})
+            parent = attrs.get("parent_event", self.instance.parent_event if self.instance else None)
+            if parent and parent.calendar_id != calendar.pk:
+                raise serializers.ValidationError({"parent_event": "Parent event must belong to the same calendar."})
         start_at = attrs.get("start_at") or (
             self.instance.start_at if self.instance else None
         )
@@ -122,6 +152,7 @@ class EventSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: dict) -> Event:
         reminders_data = validated_data.pop("reminders", [])
         members_data = validated_data.pop("members", [])
@@ -131,10 +162,13 @@ class EventSerializer(serializers.ModelSerializer):
             EventReminder.objects.create(event=event, **reminder_data)
         return event
 
+    @transaction.atomic
     def update(self, instance: Event, validated_data: dict) -> Event:
         reminders_data = validated_data.pop("reminders", None)
         members_data = validated_data.pop("members", None)
 
+        # Regenerate ICS after REST edits instead of returning stale imported text.
+        instance.caldav_raw = ""
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -154,7 +188,7 @@ class EventWriteSerializer(EventSerializer):
     """Serializer used for write operations — omits etag and uid (read-only)."""
 
     class Meta(EventSerializer.Meta):
-        read_only_fields = ["id", "uid", "etag", "created_at", "updated_at"]
+        read_only_fields = EventSerializer.Meta.read_only_fields
 
 
 class CalendarSerializer(serializers.ModelSerializer):
@@ -174,6 +208,19 @@ class CalendarSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["owner"].required = False
+        request = self.context.get("request")
+        if request is not None:
+            fields["owner"].queryset = fields["owner"].queryset.filter(user=request.user)
+        return fields
+
+    def validate_owner(self, owner):
+        if self.instance is not None and owner.pk != self.instance.owner_id:
+            raise serializers.ValidationError("Calendar ownership cannot be changed.")
+        return owner
 
     def get_event_count(self, obj: Calendar) -> int:
         return obj.events.count()
@@ -264,3 +311,15 @@ class GoogleCalendarSyncSerializer(serializers.ModelSerializer):
             "last_synced_at",
             "created_at",
         ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get("request")
+        if request is not None:
+            fields["ase_calendar"].queryset = Calendar.objects.filter(owner__user=request.user)
+        return fields
+
+    def validate_ase_calendar(self, calendar):
+        if self.instance is not None and calendar.owner_id != self.instance.member_id:
+            raise serializers.ValidationError("The calendar must belong to this sync's member.")
+        return calendar

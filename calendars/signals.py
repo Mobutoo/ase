@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import logging
 
+from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -28,6 +30,11 @@ def on_event_save_trigger_graph(sender, instance, created, update_fields, **kwar
     """Fire process_event_graph when a relevant event is saved."""
     event = instance
 
+    if not getattr(settings, "AGENT_ENABLED", False):
+        return
+    if not event.calendar.owner.circle.agent_enabled:
+        return
+
     # Guard: skip background and dependent events
     if event.event_type in ("background", "dependent"):
         return
@@ -37,7 +44,7 @@ def on_event_save_trigger_graph(sender, instance, created, update_fields, **kwar
         return
 
     # Guard: skip subscribed (imported) events
-    if getattr(event, "is_subscribed", False):
+    if event.subscription_id is not None:
         return
 
     # Guard: on update, only trigger if relevant fields changed
@@ -46,13 +53,16 @@ def on_event_save_trigger_graph(sender, instance, created, update_fields, **kwar
         if not changed.intersection(_TRIGGER_FIELDS):
             return
 
-    # Fire the async task
+    # Schedule only after commit: workers must not see uncommitted/deleted events.
+    transaction.on_commit(lambda: _schedule_event_graph(event.pk))
+
+
+def _schedule_event_graph(event_pk):
     try:
         from agents.tasks import process_event_graph
-        process_event_graph.delay(event.pk)
+        process_event_graph.delay(event_pk)
         logger.info(
-            "Event Graph triggered for event %s (%s) — created=%s",
-            event.pk, event.title, created,
+            "Event Graph triggered for event %s", event_pk,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to trigger event graph for event %s: %s", event.pk, exc)
+        logger.warning("Failed to trigger event graph for event %s: %s", event_pk, exc)

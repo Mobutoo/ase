@@ -6,6 +6,8 @@ export function Controls() {
   const { t } = useTranslation();
   const status = useTimerStore((s) => s.status);
   const phase = useTimerStore((s) => s.phase);
+  const mode = useTimerStore((s) => s.mode);
+  const complete = useTimerStore((s) => s.complete);
   const start = useTimerStore((s) => s.start);
   const pause = useTimerStore((s) => s.pause);
   const resume = useTimerStore((s) => s.resume);
@@ -55,11 +57,11 @@ export function Controls() {
 
       {!isBreak && (
         <button
-          onClick={stop}
+          onClick={mode === "free_flow" ? () => complete() : stop}
           className="flex items-center gap-2 px-6 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium hover:bg-red-500/15 hover:border-red-500/30 transition-all duration-200 active:scale-[0.97]"
         >
           <Square className="w-4 h-4" />
-          {t("timer.stop")}
+          {mode === "free_flow" ? t("timer.finish", "Finish session") : t("timer.stop")}
         </button>
       )}
     </div>

@@ -20,7 +20,7 @@ function getPlanItems(plan: DailyPlanContent): DailyPlanItem[] {
 function PlanItem({ item, index }: { item: DailyPlanItem; index: number }) {
   const title = item.task ?? item.title ?? `Step ${index + 1}`;
   const time = item.time;
-  const duration = item.duration_minutes;
+  const duration = item.durationMinutes;
   const notes = item.notes;
 
   return (
@@ -85,7 +85,7 @@ export function DailyBriefing() {
 
   // Pick the most recent daily_plan suggestion
   const planSuggestion = suggestions
-    .filter((s) => s.suggestion_type === "daily_plan")
+    .filter((s) => s.suggestionType === "daily_plan")
     [0] ?? null;
 
   const planContent = planSuggestion ? extractPlanContent(planSuggestion) : null;
